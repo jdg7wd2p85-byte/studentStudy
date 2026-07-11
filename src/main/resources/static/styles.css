@@ -132,6 +132,11 @@ button.active, button.primary {
   border-color: var(--brand);
   color: white;
 }
+button.danger {
+  background: linear-gradient(180deg, #f6a39a, var(--danger));
+  border-color: var(--danger);
+  color: white;
+}
 button:disabled {
   background: #edf4ef;
   color: #94a39d;
@@ -226,6 +231,10 @@ textarea { resize: vertical; line-height: 1.5; }
 }
 .selection-bar button {
   min-width: 120px;
+}
+.selection-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .review-card { min-height: 280px; padding: 18px; }
@@ -342,6 +351,7 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   h1 { font-size: 22px; }
   .form-grid, .search-row { grid-template-columns: 1fr; }
   .selection-bar { align-items: stretch; flex-direction: column; }
+  .selection-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .rating { grid-template-columns: 1fr 1fr; }
   .summary { gap: 8px; }
   .summary div { padding: 11px 8px; }

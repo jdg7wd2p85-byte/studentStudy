@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.momuying.studentstudy.common.ApiResponse;
 import com.momuying.studentstudy.learning.dto.CreateItemRequest;
+import com.momuying.studentstudy.learning.dto.DeleteItemsRequest;
 import com.momuying.studentstudy.learning.dto.ParseRequest;
 import com.momuying.studentstudy.learning.dto.ParsedItem;
 import com.momuying.studentstudy.learning.dto.ReviewRequest;
@@ -79,6 +80,30 @@ public class LearningController {
             created.add(create(request).data());
         }
         return ApiResponse.ok(created);
+    }
+
+    @PostMapping("/items/delete")
+    public ApiResponse<Map<String, Object>> deleteItems(@RequestBody DeleteItemsRequest request) {
+        if (request.itemIds() == null || request.itemIds().isEmpty()) {
+            return ApiResponse.ok(Map.of("deleted", 0));
+        }
+        List<Long> ids = request.itemIds().stream()
+                .filter(id -> id != null && id > 0)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return ApiResponse.ok(Map.of("deleted", 0));
+        }
+        String placeholders = String.join(",", ids.stream().map(id -> "?").toList());
+        int deleted = jdbcTemplate.update("""
+                UPDATE learning_items
+                SET status = 'ARCHIVED'
+                WHERE status <> 'ARCHIVED'
+                  AND id IN (
+                """ + placeholders + """
+                  )
+                """, ids.toArray());
+        return ApiResponse.ok(Map.of("deleted", deleted));
     }
 
     @GetMapping("/items")

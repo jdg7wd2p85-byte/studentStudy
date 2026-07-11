@@ -26,6 +26,7 @@ $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
+$("deleteSelectedBtn").onclick = deleteSelectedItems;
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -235,6 +236,24 @@ async function makePaper() {
   `;
 }
 
+async function deleteSelectedItems() {
+  const itemIds = [...state.selected];
+  if (!itemIds.length) {
+    alert("请先在列表里勾选学习项");
+    return;
+  }
+  if (!confirm(`确认删除已选的 ${itemIds.length} 项吗？`)) {
+    return;
+  }
+  const result = await api("/api/items/delete", {
+    method: "POST",
+    body: JSON.stringify({ itemIds })
+  });
+  itemIds.forEach((id) => state.selected.delete(id));
+  await Promise.all([loadItems(), loadToday(), loadReport()]);
+  alert(`已删除 ${result.deleted ?? 0} 项`);
+}
+
 function showTab(tabId) {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tabId));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === tabId));
@@ -263,6 +282,9 @@ function updateSelectionBar() {
   }
   if ($("makePaperBtn")) {
     $("makePaperBtn").disabled = count === 0;
+  }
+  if ($("deleteSelectedBtn")) {
+    $("deleteSelectedBtn").disabled = count === 0;
   }
 }
 
