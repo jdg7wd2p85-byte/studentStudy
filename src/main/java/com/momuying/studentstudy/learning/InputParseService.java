@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class InputParseService {
-    private static final Pattern OBSIDIAN_WORD = Pattern.compile("^#([^\\s#%]+)\\s+([A-Za-z][A-Za-z'\\-]*)\\s+%%(.+?)%%\\s*$");
+    private static final Pattern OBSIDIAN_WORD = Pattern.compile("^#([^\\s#%]+)\\s+(.+?)\\s+%%(.+?)%%\\s*(.*)$");
     private static final Pattern KEY_VALUE = Pattern.compile("^(.+?)\\s*(?:[:：=|])\\s*(.+)$");
     private static final Pattern WORD_SPACE_MEANING = Pattern.compile("^([A-Za-z][A-Za-z'\\-]*)\\s+(.+)$");
 
@@ -42,11 +42,18 @@ public class InputParseService {
         Matcher obsidian = OBSIDIAN_WORD.matcher(line);
         if (obsidian.matches()) {
             String tag = obsidian.group(1);
-            String word = obsidian.group(2);
+            String word = obsidian.group(2).trim();
             String meaning = obsidian.group(3);
+            String trailing = obsidian.group(4).trim();
             tags.add(tag);
             extra.put("word", word);
             extra.put("meaning", meaning);
+            if (!trailing.isBlank()) {
+                extra.put("trailing", trailing);
+                if (trailing.matches("\\d+")) {
+                    extra.put("sourceIndex", Integer.parseInt(trailing));
+                }
+            }
             return new ParsedItem(line, "WORD", "FLASHCARD", word, word, null, meaning, null,
                     distinct(tags), extra, 0.96, warnings);
         }

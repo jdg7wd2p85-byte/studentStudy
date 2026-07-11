@@ -23,6 +23,27 @@ class InputParseServiceTest {
     }
 
     @Test
+    void parsesObsidianWordFormatWithTrailingNumber() {
+        List<ParsedItem> items = service.parse(new ParseRequest(
+                1L, 1L, 1L, "WORD", "#英文单词 Chamomile %%洋甘菊%% 1", "", ""));
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).title()).isEqualTo("Chamomile");
+        assertThat(items.get(0).answer()).isEqualTo("洋甘菊");
+        assertThat(items.get(0).extraFields()).containsEntry("sourceIndex", 1);
+    }
+
+    @Test
+    void parsesObsidianPhraseFormat() {
+        List<ParsedItem> items = service.parse(new ParseRequest(
+                1L, 1L, 1L, "WORD", "#英文单词 work out %%锻炼；解决%%", "", ""));
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).title()).isEqualTo("work out");
+        assertThat(items.get(0).answer()).isEqualTo("锻炼；解决");
+    }
+
+    @Test
     void parsesColonFormat() {
         List<ParsedItem> items = service.parse(new ParseRequest(
                 1L, 1L, 1L, "WORD", "efficient: 高效的", "", "易错"));
