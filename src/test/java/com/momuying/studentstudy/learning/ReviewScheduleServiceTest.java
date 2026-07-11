@@ -30,4 +30,11 @@ class ReviewScheduleServiceTest {
         assertThat(result.reviewStage()).isEqualTo(2);
         assertThat(result.nextReviewAt()).isEqualTo(now.plusDays(1));
     }
+
+    @Test
+    void newItemIsReviewableImmediately() {
+        LocalDateTime learnedAt = LocalDateTime.of(2026, 7, 11, 12, 0);
+
+        assertThat(service.initialNextReview(learnedAt)).isEqualTo(learnedAt);
+    }
 }

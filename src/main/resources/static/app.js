@@ -4,6 +4,7 @@ const state = {
   items: [],
   today: [],
   reviewIndex: 0,
+  revealAnswer: false,
   selected: new Set()
 };
 
@@ -120,6 +121,7 @@ async function loadItems() {
 async function loadToday() {
   state.today = await api("/api/reviews/today");
   state.reviewIndex = 0;
+  state.revealAnswer = false;
   renderReview();
   updateSummary();
 }
@@ -154,12 +156,17 @@ function renderReview() {
   card.className = "review-card";
   card.innerHTML = `
     <div class="meta">${escapeHtml(item.category_name)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
-    <div class="card-title">${escapeHtml(item.title)}</div>
-    <details>
-      <summary>翻卡 / 显示答案</summary>
+    <div class="flashcard">
+      <div class="card-label">正面</div>
+      <div class="card-title">${escapeHtml(item.title)}</div>
+      ${item.prompt ? `<div class="card-prompt">${escapeHtml(item.prompt)}</div>` : ""}
+    </div>
+    <button class="answer-toggle" onclick="toggleAnswer()">${state.revealAnswer ? "隐藏答案" : "显示答案"}</button>
+    <div class="answer-panel ${state.revealAnswer ? "" : "hidden"}">
+      <div class="card-label">答案</div>
       <div class="answer">${escapeHtml(item.answer || item.content || "无答案")}</div>
       ${item.explanation ? `<div class="answer">${escapeHtml(item.explanation)}</div>` : ""}
-    </details>
+    </div>
     <div class="rating">
       <button onclick="submitReview(${item.id},0)">不会</button>
       <button onclick="submitReview(${item.id},1)">模糊</button>
@@ -169,12 +176,18 @@ function renderReview() {
   `;
 }
 
+function toggleAnswer() {
+  state.revealAnswer = !state.revealAnswer;
+  renderReview();
+}
+
 async function submitReview(id, rating) {
   await api(`/api/reviews/${id}/submit`, {
     method: "POST",
     body: JSON.stringify({ rating, note: "" })
   });
   state.reviewIndex += 1;
+  state.revealAnswer = false;
   await Promise.all([loadItems(), loadToday()]);
 }
 

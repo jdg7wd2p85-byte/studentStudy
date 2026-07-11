@@ -37,7 +37,7 @@ public class ReviewScheduleService {
     }
 
     public LocalDateTime initialNextReview(LocalDateTime learnedAt) {
-        return learnedAt.plusDays(1);
+        return learnedAt;
     }
 
     public record ReviewResult(int masteryScore, int reviewStage, LocalDateTime nextReviewAt) {

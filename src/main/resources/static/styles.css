@@ -157,12 +157,50 @@ textarea { resize: vertical; line-height: 1.5; }
 
 .review-card { min-height: 280px; padding: 18px; }
 .review-card.empty { color: var(--muted); display: grid; place-items: center; }
+.flashcard {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-bottom: 5px solid rgba(155, 215, 229, 0.72);
+  border-radius: 8px;
+  margin: 18px 0 12px;
+  min-height: 170px;
+  padding: 16px;
+  display: grid;
+  align-content: center;
+  text-align: center;
+}
+.card-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
 .card-title {
   font-size: 34px;
   text-align: center;
-  margin: 36px 0;
+  margin: 0;
   color: var(--brand-dark);
   word-break: break-word;
+}
+.card-prompt {
+  color: var(--muted);
+  line-height: 1.5;
+  margin-top: 12px;
+}
+.answer-toggle {
+  width: 100%;
+  background: var(--sun);
+  border-color: #dbaf34;
+}
+.answer-panel {
+  background: rgba(223, 242, 222, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 12px;
+}
+.answer-panel.hidden {
+  display: none;
 }
 details {
   background: rgba(223, 242, 222, 0.55);
