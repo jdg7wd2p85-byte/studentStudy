@@ -71,6 +71,31 @@ main { max-width: 840px; margin: 0 auto; padding: 16px 14px 28px; }
 .summary div:nth-child(3) { border-bottom-color: rgba(242, 139, 130, 0.5); }
 .summary strong { display: block; font-size: 25px; color: var(--brand-dark); }
 .summary span { color: var(--muted); font-size: 13px; }
+.module-stats {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-bottom: 12px;
+}
+.module-chip {
+  background: rgba(255, 253, 244, 0.92);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--brand);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(47, 113, 76, 0.08);
+  padding: 10px;
+}
+.module-chip span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+}
+.module-chip strong {
+  color: var(--brand-dark);
+  display: block;
+  font-size: 20px;
+  margin-top: 4px;
+}
 
 .tabs {
   display: grid;
@@ -94,6 +119,12 @@ button.active, button.primary {
   background: var(--brand);
   border-color: var(--brand);
   color: white;
+}
+button:disabled {
+  background: #edf4ef;
+  color: #94a39d;
+  cursor: not-allowed;
+  transform: none;
 }
 button:active {
   transform: translateY(2px);
@@ -154,6 +185,25 @@ textarea { resize: vertical; line-height: 1.5; }
   white-space: nowrap;
 }
 .search-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 12px; }
+.selection-bar {
+  align-items: center;
+  background: rgba(223, 242, 222, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+.selection-bar span {
+  color: var(--brand-dark);
+  font-size: 14px;
+  font-weight: 800;
+}
+.selection-bar button {
+  min-width: 120px;
+}
 
 .review-card { min-height: 280px; padding: 18px; }
 .review-card.empty { color: var(--muted); display: grid; place-items: center; }
@@ -220,11 +270,15 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   .app-header { align-items: center; }
   h1 { font-size: 22px; }
   .form-grid, .search-row { grid-template-columns: 1fr; }
+  .selection-bar { align-items: stretch; flex-direction: column; }
   .rating { grid-template-columns: 1fr 1fr; }
   .summary { gap: 8px; }
   .summary div { padding: 11px 8px; }
   .summary strong { font-size: 22px; }
   .summary span { font-size: 12px; }
+  .module-stats { grid-template-columns: 1fr 1fr; }
+  .module-chip { padding: 9px; }
+  .module-chip strong { font-size: 18px; }
   .tabs { gap: 6px; }
   button { padding: 0 8px; }
   .card-title { font-size: 30px; }

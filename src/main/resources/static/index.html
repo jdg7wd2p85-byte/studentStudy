@@ -21,6 +21,7 @@
     <div><strong id="itemCount">0</strong><span>学习项</span></div>
     <div><strong id="weakCount">0</strong><span>薄弱项</span></div>
   </section>
+  <section id="moduleStats" class="module-stats"></section>
 
   <nav class="tabs">
     <button class="active" data-tab="input">录入</button>
@@ -57,6 +58,10 @@ apple 苹果"></textarea>
       <input id="keywordInput" placeholder="搜索标题/答案">
       <input id="tagFilterInput" placeholder="标签">
       <button id="searchBtn">搜索</button>
+    </div>
+    <div class="selection-bar">
+      <span id="selectedCount">已选 0 项</span>
+      <button id="makePaperFromListBtn" class="primary">生成练习卷</button>
     </div>
     <div id="itemsList" class="list"></div>
   </section>

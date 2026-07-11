@@ -24,6 +24,7 @@ $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
 $("makePaperBtn").onclick = makePaper;
+$("makePaperFromListBtn").onclick = makePaper;
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -141,8 +142,10 @@ function renderItems() {
     input.onchange = () => {
       const id = Number(input.dataset.id);
       input.checked ? state.selected.add(id) : state.selected.delete(id);
+      updateSelectionBar();
     };
   });
+  updateSelectionBar();
 }
 
 function renderReview() {
@@ -207,6 +210,7 @@ async function makePaper() {
       itemIds
     })
   });
+  showTab("paper");
   $("paperPreview").innerHTML = `
     <h3>${escapeHtml(paper.title)}</h3>
     ${paper.items.map((q, i) => `
@@ -218,6 +222,11 @@ async function makePaper() {
   `;
 }
 
+function showTab(tabId) {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tabId));
+  document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === tabId));
+}
+
 function selectedCategory() {
   const id = Number($("categorySelect").value);
   return state.catalog.categories.find((c) => Number(c.id) === id) || state.catalog.categories[0];
@@ -227,6 +236,38 @@ function updateSummary() {
   $("todayCount").textContent = state.today.length;
   $("itemCount").textContent = state.items.length;
   $("weakCount").textContent = state.items.filter((item) => item.mastery_score < 60).length;
+  updateSelectionBar();
+  renderModuleStats();
+}
+
+function updateSelectionBar() {
+  const count = state.selected.size;
+  if ($("selectedCount")) {
+    $("selectedCount").textContent = `已选 ${count} 项`;
+  }
+  if ($("makePaperFromListBtn")) {
+    $("makePaperFromListBtn").disabled = count === 0;
+  }
+  if ($("makePaperBtn")) {
+    $("makePaperBtn").disabled = count === 0;
+  }
+}
+
+function renderModuleStats() {
+  const stats = new Map();
+  state.items.forEach((item) => {
+    const key = `${item.subject_name || "未分类"} / ${item.category_name || "默认"}`;
+    stats.set(key, (stats.get(key) || 0) + 1);
+  });
+  const rows = [...stats.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+  $("moduleStats").innerHTML = rows.map(([label, count]) => `
+    <div class="module-chip">
+      <span>${escapeHtml(label)}</span>
+      <strong>${count}项</strong>
+    </div>
+  `).join("");
 }
 
 function formatDate(value) {
