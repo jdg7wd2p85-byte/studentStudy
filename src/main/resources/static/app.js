@@ -80,7 +80,7 @@ function renderParsed() {
 }
 
 function renderParsedItem(item) {
-  if (item.displayMode === "LONG_TEXT") {
+  if (isLongTextItem(item)) {
     return `
       <article class="item text-preview">
         <div class="item-head">
@@ -159,16 +159,7 @@ async function loadReport() {
 }
 
 function renderItems() {
-  $("itemsList").innerHTML = state.items.map((item) => `
-    <article class="item">
-      <div class="item-head">
-        <label><input type="checkbox" data-id="${item.id}" ${state.selected.has(item.id) ? "checked" : ""}> ${escapeHtml(item.title)}</label>
-        <span class="badge">背${Number(item.total_review_count || 0)}次</span>
-      </div>
-      <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
-      <div class="meta">${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
-    </article>
-  `).join("");
+  $("itemsList").innerHTML = state.items.map(renderItemCard).join("");
   document.querySelectorAll("#itemsList input[type=checkbox]").forEach((input) => {
     input.onchange = () => {
       const id = Number(input.dataset.id);
@@ -177,6 +168,32 @@ function renderItems() {
     };
   });
   updateSelectionBar();
+}
+
+function renderItemCard(item) {
+  const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
+  if (isLongTextItem(item)) {
+    return `
+      <article class="item text-preview">
+        <div class="item-head">
+          <label><input type="checkbox" data-id="${item.id}" ${state.selected.has(item.id) ? "checked" : ""}> ${escapeHtml(item.title)}</label>
+          <span class="badge">读${Number(item.total_review_count || 0)}次</span>
+        </div>
+        <div class="text-body">${escapeHtml(item.content || "")}</div>
+        <div class="meta">${meta}</div>
+      </article>
+    `;
+  }
+  return `
+    <article class="item">
+      <div class="item-head">
+        <label><input type="checkbox" data-id="${item.id}" ${state.selected.has(item.id) ? "checked" : ""}> ${escapeHtml(item.title)}</label>
+        <span class="badge">背${Number(item.total_review_count || 0)}次</span>
+      </div>
+      <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
+      <div class="meta">${meta}</div>
+    </article>
+  `;
 }
 
 function renderReview() {
@@ -188,6 +205,23 @@ function renderReview() {
     return;
   }
   card.className = "review-card";
+  if (isLongTextItem(item)) {
+    card.innerHTML = `
+      <div class="meta">${escapeHtml(item.category_name)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
+      <div class="text-review">
+        <div class="card-label">课文</div>
+        <h3>${escapeHtml(item.title)}</h3>
+        <div class="text-body">${escapeHtml(item.content || item.title || "")}</div>
+      </div>
+      <div class="rating">
+        <button onclick="submitReview(${item.id},0)">没读熟</button>
+        <button onclick="submitReview(${item.id},1)">不流畅</button>
+        <button onclick="submitReview(${item.id},2)">基本会</button>
+        <button onclick="submitReview(${item.id},3)">熟练</button>
+      </div>
+    `;
+    return;
+  }
   card.innerHTML = `
     <div class="meta">${escapeHtml(item.category_name)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
     <div class="flashcard">
@@ -213,6 +247,10 @@ function renderReview() {
 function toggleAnswer() {
   state.revealAnswer = !state.revealAnswer;
   renderReview();
+}
+
+function isLongTextItem(item) {
+  return item.displayMode === "LONG_TEXT" || item.display_mode === "LONG_TEXT";
 }
 
 async function submitReview(id, rating) {

@@ -213,6 +213,14 @@ textarea { resize: vertical; line-height: 1.5; }
   padding: 12px;
   white-space: pre-wrap;
 }
+.text-review {
+  margin-top: 14px;
+}
+.text-review h3 {
+  color: var(--brand-dark);
+  font-size: 20px;
+  margin: 0 0 10px;
+}
 .badge {
   display: inline-block;
   padding: 4px 8px;
