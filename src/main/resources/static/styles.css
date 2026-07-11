@@ -99,7 +99,7 @@ main { max-width: 840px; margin: 0 auto; padding: 16px 14px 28px; }
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -265,6 +265,54 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 .paper { background: var(--paper); border: 1px dashed var(--brand); border-radius: 8px; padding: 12px; }
 .paper-question { padding: 10px 0; border-bottom: 1px solid var(--line); }
 .hint { margin-top: 0; }
+.report-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, 1fr);
+}
+.report-grid div {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+.report-grid strong {
+  color: var(--brand-dark);
+  display: block;
+  font-size: 26px;
+}
+.report-grid span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.report-list {
+  margin-top: 14px;
+}
+.report-list h3 {
+  font-size: 17px;
+  margin: 0 0 10px;
+}
+.report-row {
+  align-items: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 12px;
+}
+.report-row strong {
+  display: block;
+  font-size: 15px;
+}
+.report-row span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+}
 
 @media (max-width: 560px) {
   .app-header { align-items: center; }
@@ -280,6 +328,8 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   .module-chip { padding: 9px; }
   .module-chip strong { font-size: 18px; }
   .tabs { gap: 6px; }
-  button { padding: 0 8px; }
+  button { padding: 0 6px; }
   .card-title { font-size: 30px; }
+  .report-grid { grid-template-columns: 1fr 1fr; }
+  .report-row { align-items: flex-start; flex-direction: column; }
 }

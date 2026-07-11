@@ -3,6 +3,7 @@ const state = {
   parsed: [],
   items: [],
   today: [],
+  report: null,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set()
@@ -39,7 +40,7 @@ async function api(path, options = {}) {
 async function loadAll() {
   state.catalog = await api("/api/catalog");
   renderCatalog();
-  await Promise.all([loadItems(), loadToday()]);
+  await Promise.all([loadItems(), loadToday(), loadReport()]);
 }
 
 function renderCatalog() {
@@ -116,7 +117,7 @@ async function loadItems() {
   if ($("tagFilterInput")?.value) params.set("tag", $("tagFilterInput").value);
   state.items = await api(`/api/items?${params}`);
   renderItems();
-  updateSummary();
+  updateSelectionBar();
 }
 
 async function loadToday() {
@@ -127,15 +128,22 @@ async function loadToday() {
   updateSummary();
 }
 
+async function loadReport() {
+  state.report = await api("/api/reports/summary");
+  updateSummary();
+  renderModuleStats();
+  renderReport();
+}
+
 function renderItems() {
   $("itemsList").innerHTML = state.items.map((item) => `
     <article class="item">
       <div class="item-head">
         <label><input type="checkbox" data-id="${item.id}" ${state.selected.has(item.id) ? "checked" : ""}> ${escapeHtml(item.title)}</label>
-        <span class="badge">${item.mastery_score}</span>
+        <span class="badge">背${Number(item.total_review_count || 0)}次</span>
       </div>
       <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
-      <div class="meta">${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 下次 ${formatDate(item.next_review_at)}</div>
+      <div class="meta">${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
     </article>
   `).join("");
   document.querySelectorAll("#itemsList input[type=checkbox]").forEach((input) => {
@@ -191,7 +199,7 @@ async function submitReview(id, rating) {
   });
   state.reviewIndex += 1;
   state.revealAnswer = false;
-  await Promise.all([loadItems(), loadToday()]);
+  await Promise.all([loadItems(), loadToday(), loadReport()]);
 }
 
 async function makePaper() {
@@ -233,11 +241,11 @@ function selectedCategory() {
 }
 
 function updateSummary() {
-  $("todayCount").textContent = state.today.length;
-  $("itemCount").textContent = state.items.length;
-  $("weakCount").textContent = state.items.filter((item) => item.mastery_score < 60).length;
+  const overview = state.report?.overview || {};
+  $("todayCount").textContent = state.report?.dueToday ?? state.today.length;
+  $("itemCount").textContent = overview.total_items ?? 0;
+  $("weakCount").textContent = overview.weak_count ?? 0;
   updateSelectionBar();
-  renderModuleStats();
 }
 
 function updateSelectionBar() {
@@ -254,20 +262,38 @@ function updateSelectionBar() {
 }
 
 function renderModuleStats() {
-  const stats = new Map();
-  state.items.forEach((item) => {
-    const key = `${item.subject_name || "未分类"} / ${item.category_name || "默认"}`;
-    stats.set(key, (stats.get(key) || 0) + 1);
-  });
-  const rows = [...stats.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-  $("moduleStats").innerHTML = rows.map(([label, count]) => `
+  const rows = (state.report?.modules || []).slice(0, 8);
+  $("moduleStats").innerHTML = rows.map((row) => `
     <div class="module-chip">
-      <span>${escapeHtml(label)}</span>
-      <strong>${count}项</strong>
+      <span>${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)}</span>
+      <strong>${row.item_count}项</strong>
     </div>
   `).join("");
+}
+
+function renderReport() {
+  if (!state.report) return;
+  const overview = state.report.overview || {};
+  $("reportOverview").innerHTML = `
+    <div><strong>${overview.total_items ?? 0}</strong><span>学习项总数</span></div>
+    <div><strong>${state.report.dueToday ?? 0}</strong><span>今日待复习</span></div>
+    <div><strong>${overview.reviewed_items ?? 0}</strong><span>已背过项目</span></div>
+    <div><strong>${overview.total_reviews ?? 0}</strong><span>累计背诵次数</span></div>
+    <div><strong>${overview.weak_count ?? 0}</strong><span>薄弱项</span></div>
+    <div><strong>${overview.avg_mastery ?? 0}</strong><span>平均掌握分</span></div>
+  `;
+  $("reportModules").innerHTML = `
+    <h3>模块分析</h3>
+    ${(state.report.modules || []).map((row) => `
+      <article class="report-row">
+        <div>
+          <strong>${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)}</strong>
+          <span>${row.item_count} 项 / 背 ${row.review_count} 次 / 薄弱 ${row.weak_count} 项</span>
+        </div>
+        <span class="badge">均分 ${row.avg_mastery}</span>
+      </article>
+    `).join("")}
+  `;
 }
 
 function formatDate(value) {
