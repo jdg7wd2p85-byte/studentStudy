@@ -53,4 +53,17 @@ class InputParseServiceTest {
         assertThat(items.get(0).answer()).isEqualTo("高效的");
         assertThat(items.get(0).tags()).contains("易错");
     }
+
+    @Test
+    void keepsChineseTextCompleteInsteadOfSplittingByPunctuation() {
+        String text = "床前明月光：疑是地上霜。举头望明月，低头思故乡。";
+
+        List<ParsedItem> items = service.parse(new ParseRequest(
+                1L, 2L, 3L, "TEXT", text, "", "语文"));
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).displayMode()).isEqualTo("LONG_TEXT");
+        assertThat(items.get(0).content()).isEqualTo(text);
+        assertThat(items.get(0).answer()).isEmpty();
+    }
 }

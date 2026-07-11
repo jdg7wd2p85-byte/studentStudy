@@ -34,7 +34,7 @@ public class InputParseService {
 
     private ParsedItem parseLine(String line, ParseRequest request) {
         String categoryCode = valueOrDefault(request.categoryCode(), "WORD");
-        String displayMode = "WORD".equals(categoryCode) ? "FLASHCARD" : "QA";
+        String displayMode = displayModeFor(categoryCode);
         List<String> tags = parseTags(request.tags());
         Map<String, Object> extra = new LinkedHashMap<>();
         List<String> warnings = new ArrayList<>();
@@ -58,29 +58,54 @@ public class InputParseService {
                     distinct(tags), extra, 0.96, warnings);
         }
 
-        Matcher kv = KEY_VALUE.matcher(line);
-        if (kv.matches()) {
-            String key = kv.group(1).trim();
-            String value = kv.group(2).trim();
-            extra.put("rawKey", key);
-            extra.put("rawValue", value);
-            return new ParsedItem(line, categoryCode, displayMode, key, key, key, value, null,
-                    distinct(tags), extra, 0.82, warnings);
-        }
+        if (isLanguageCard(categoryCode)) {
+            Matcher kv = KEY_VALUE.matcher(line);
+            if (kv.matches()) {
+                String key = kv.group(1).trim();
+                String value = kv.group(2).trim();
+                extra.put("rawKey", key);
+                extra.put("rawValue", value);
+                return new ParsedItem(line, categoryCode, displayMode, key, key, key, value, null,
+                        distinct(tags), extra, 0.82, warnings);
+            }
 
-        Matcher word = WORD_SPACE_MEANING.matcher(line);
-        if (word.matches()) {
-            String title = word.group(1);
-            String answer = word.group(2).trim();
-            extra.put("word", title);
-            extra.put("meaning", answer);
-            return new ParsedItem(line, "WORD", "FLASHCARD", title, title, null, answer, null,
-                    distinct(tags), extra, 0.9, warnings);
+            Matcher word = WORD_SPACE_MEANING.matcher(line);
+            if (word.matches()) {
+                String title = word.group(1);
+                String answer = word.group(2).trim();
+                extra.put("word", title);
+                extra.put("meaning", answer);
+                return new ParsedItem(line, "WORD", "FLASHCARD", title, title, null, answer, null,
+                        distinct(tags), extra, 0.9, warnings);
+            }
         }
 
         warnings.add("未识别出明确答案，请确认后保存");
-        return new ParsedItem(line, categoryCode, displayMode, line, line, line, "", null,
+        String title = summarize(line);
+        return new ParsedItem(line, categoryCode, displayMode, title, title, line, "", null,
                 distinct(tags), extra, 0.35, warnings);
+    }
+
+    private boolean isLanguageCard(String categoryCode) {
+        return "WORD".equals(categoryCode) || "SENTENCE".equals(categoryCode);
+    }
+
+    private String displayModeFor(String categoryCode) {
+        return switch (categoryCode) {
+            case "WORD", "SENTENCE" -> "FLASHCARD";
+            case "TEXT" -> "LONG_TEXT";
+            case "FORMULA" -> "FORMULA";
+            case "WRONG_QUESTION" -> "EXPLANATION";
+            default -> "QA";
+        };
+    }
+
+    private String summarize(String line) {
+        String value = line.trim();
+        if (value.length() <= 60) {
+            return value;
+        }
+        return value.substring(0, 60) + "...";
     }
 
     private List<String> parseTags(String tags) {
