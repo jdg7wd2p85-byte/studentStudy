@@ -76,17 +76,34 @@ async function parseInput() {
 }
 
 function renderParsed() {
-  $("parsePreview").innerHTML = state.parsed.map((item, index) => `
+  $("parsePreview").innerHTML = state.parsed.map(renderParsedItem).join("");
+}
+
+function renderParsedItem(item) {
+  if (item.displayMode === "LONG_TEXT") {
+    return `
+      <article class="item text-preview">
+        <div class="item-head">
+          <h3>${escapeHtml(item.title || "课文")}</h3>
+          <span class="badge">1条课文</span>
+        </div>
+        <div class="text-body">${escapeHtml(item.content || "")}</div>
+        <div class="meta">保存后将作为一条完整课文记录</div>
+        ${item.warnings?.length ? `<div class="meta">${escapeHtml(item.warnings.join("；"))}</div>` : ""}
+      </article>
+    `;
+  }
+  return `
     <article class="item">
       <div class="item-head">
         <h3>${escapeHtml(item.title)}</h3>
         <span class="badge">${Math.round(item.confidence * 100)}%</span>
       </div>
-      <div class="answer ${item.displayMode === "LONG_TEXT" ? "long-text" : ""}">${escapeHtml(item.content || item.answer || "待补充答案")}</div>
-      ${item.displayMode === "LONG_TEXT" ? "" : `<div class="meta">${escapeHtml(item.rawText)}</div>`}
+      <div class="answer">${escapeHtml(item.content || item.answer || "待补充答案")}</div>
+      <div class="meta">${escapeHtml(item.rawText)}</div>
       ${item.warnings?.length ? `<div class="meta">${escapeHtml(item.warnings.join("；"))}</div>` : ""}
     </article>
-  `).join("");
+  `;
 }
 
 async function saveParsed() {
