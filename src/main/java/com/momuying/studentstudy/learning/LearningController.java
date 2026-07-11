@@ -130,7 +130,7 @@ public class LearningController {
                   AND i.next_review_at <= ?
                 """ + (childId == null ? "" : " AND i.child_id = ?") + """
                 ORDER BY i.next_review_at ASC, i.mastery_score ASC, i.wrong_count DESC, i.id ASC
-                LIMIT 100
+                LIMIT 300
                 """;
         Object[] args = childId == null
                 ? new Object[]{Timestamp.valueOf(LocalDateTime.now().plusDays(1).toLocalDate().atStartOfDay())}
