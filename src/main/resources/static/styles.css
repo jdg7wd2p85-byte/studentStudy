@@ -178,6 +178,33 @@ input:focus, select:focus, textarea:focus {
   outline: none;
 }
 textarea { resize: vertical; line-height: 1.5; }
+.paste-box {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  line-height: 1.6;
+  margin-top: 6px;
+  min-height: 180px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.paste-box:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(63, 143, 98, 0.14);
+  outline: none;
+}
+.paste-box:empty::before {
+  color: #8a9b94;
+  content: attr(data-placeholder);
+  white-space: pre-wrap;
+}
+.raw-text-store {
+  display: none;
+}
 .block-label { display: block; margin-top: 12px; }
 .actions { display: flex; gap: 10px; margin: 12px 0; }
 .actions button { flex: 1; }

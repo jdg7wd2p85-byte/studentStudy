@@ -40,9 +40,10 @@
       <label class="wide">标签<input id="tagsInput" placeholder="英文单词, 易错"></label>
     </div>
     <label class="block-label">粘贴内容</label>
-    <textarea id="rawText" rows="7" placeholder="#英文单词 memory %%记忆%%
+    <div id="pasteBox" class="paste-box" contenteditable="true" role="textbox" aria-multiline="true" spellcheck="false" data-placeholder="#英文单词 memory %%记忆%%
 efficient: 高效的
-apple 苹果"></textarea>
+apple 苹果"></div>
+    <textarea id="rawText" class="raw-text-store" rows="7"></textarea>
     <div class="actions">
       <button id="parseBtn">解析预览</button>
       <button id="saveParsedBtn" class="primary">保存解析结果</button>

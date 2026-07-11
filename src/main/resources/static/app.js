@@ -27,6 +27,9 @@ $("searchBtn").onclick = loadItems;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
+$("pasteBox").addEventListener("input", syncPasteBoxToRawText);
+$("pasteBox").addEventListener("paste", pastePlainText);
+$("pasteBox").addEventListener("click", () => $("pasteBox").focus());
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -59,6 +62,7 @@ function fillSelect(id, rows, labelKey, emptyLabel = "") {
 }
 
 async function parseInput() {
+  syncPasteBoxToRawText();
   const category = selectedCategory();
   state.parsed = await api("/api/items/parse", {
     method: "POST",
@@ -125,11 +129,27 @@ async function saveParsed() {
     extraFields: item.extraFields || {}
   }));
   await api("/api/items/batch", { method: "POST", body: JSON.stringify(requests) });
-  $("rawText").value = "";
+  setRawText("");
   state.parsed = [];
   renderParsed();
   await loadAll();
   alert("保存完成，重复项会自动复用已有记录");
+}
+
+function pastePlainText(event) {
+  event.preventDefault();
+  const text = event.clipboardData?.getData("text/plain") || "";
+  document.execCommand("insertText", false, text);
+  syncPasteBoxToRawText();
+}
+
+function syncPasteBoxToRawText() {
+  $("rawText").value = $("pasteBox").innerText.replace(/\u00a0/g, " ").trim();
+}
+
+function setRawText(value) {
+  $("rawText").value = value;
+  $("pasteBox").textContent = value;
 }
 
 async function loadItems() {
