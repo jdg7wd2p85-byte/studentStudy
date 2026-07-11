@@ -240,6 +240,15 @@ textarea { resize: vertical; line-height: 1.5; }
   padding: 12px;
   white-space: pre-wrap;
 }
+.text-excerpt {
+  background: rgba(255, 253, 244, 0.65);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #365a4f;
+  line-height: 1.55;
+  margin-top: 10px;
+  padding: 10px;
+}
 .text-review {
   margin-top: 14px;
 }

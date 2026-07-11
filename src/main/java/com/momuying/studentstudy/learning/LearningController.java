@@ -51,6 +51,7 @@ public class LearningController {
         LocalDateTime now = LocalDateTime.now();
         String itemType = valueOrDefault(request.itemType(), categoryCode(request.categoryId()));
         String displayMode = valueOrDefault(request.displayMode(), categoryDisplayMode(request.categoryId()));
+        Long subjectId = categorySubjectId(request.categoryId(), request.subjectId());
         String title = required(request.title(), "标题不能为空");
         String answer = blankToNull(request.answer());
         Long existingId = findDuplicateId(request.childId(), request.categoryId(), title, answer);
@@ -65,7 +66,7 @@ public class LearningController {
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                request.childId(), request.subjectId(), request.categoryId(), itemType, displayMode,
+                request.childId(), subjectId, request.categoryId(), itemType, displayMode,
                 title, request.prompt(), request.content(), answer,
                 request.explanation(), toJson(request.extraFields()), request.source(), tags,
                 Timestamp.valueOf(now), Timestamp.valueOf(scheduleService.initialNextReview(now)));
@@ -232,6 +233,12 @@ public class LearningController {
     private String categoryDisplayMode(Long categoryId) {
         return jdbcClient.sql("SELECT default_display_mode FROM item_categories WHERE id = ?")
                 .param(categoryId).query(String.class).single();
+    }
+
+    private Long categorySubjectId(Long categoryId, Long fallbackSubjectId) {
+        Long subjectId = jdbcClient.sql("SELECT subject_id FROM item_categories WHERE id = ?")
+                .param(categoryId).query(Long.class).optional().orElse(null);
+        return subjectId == null ? fallbackSubjectId : subjectId;
     }
 
     private String toJson(Object value) throws JsonProcessingException {

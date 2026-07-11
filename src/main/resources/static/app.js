@@ -27,6 +27,12 @@ $("searchBtn").onclick = loadItems;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
+$("categorySelect").addEventListener("change", syncSubjectWithCategory);
+$("subjectFilterSelect").addEventListener("change", () => {
+  renderCategoryFilter();
+  loadItems();
+});
+$("categoryFilterSelect").addEventListener("change", loadItems);
 $("pasteBox").addEventListener("input", syncPasteBoxToRawText);
 $("pasteBox").addEventListener("paste", pastePlainText);
 $("pasteBox").addEventListener("click", () => $("pasteBox").focus());
@@ -52,13 +58,29 @@ function renderCatalog() {
   fillSelect("subjectSelect", state.catalog.subjects, "name");
   fillSelect("categorySelect", state.catalog.categories, "name");
   fillSelect("subjectFilterSelect", state.catalog.subjects, "name", "全部科目");
-  fillSelect("categoryFilterSelect", state.catalog.categories, "name", "全部类别");
+  renderCategoryFilter();
+  syncSubjectWithCategory();
 }
 
 function fillSelect(id, rows, labelKey, emptyLabel = "") {
   const el = $(id);
   const emptyOption = emptyLabel ? `<option value="">${escapeHtml(emptyLabel)}</option>` : "";
   el.innerHTML = emptyOption + rows.map((row) => `<option value="${row.id}">${escapeHtml(row[labelKey])}</option>`).join("");
+}
+
+function renderCategoryFilter() {
+  const subjectId = $("subjectFilterSelect")?.value;
+  const categories = subjectId
+    ? state.catalog.categories.filter((row) => String(row.subject_id || "") === String(subjectId))
+    : state.catalog.categories;
+  fillSelect("categoryFilterSelect", categories, "name", "全部类别");
+}
+
+function syncSubjectWithCategory() {
+  const category = selectedCategory();
+  if (category?.subject_id) {
+    $("subjectSelect").value = String(category.subject_id);
+  }
 }
 
 async function parseInput() {
@@ -199,7 +221,7 @@ function renderItemCard(item) {
           <label><input type="checkbox" data-id="${item.id}" ${state.selected.has(item.id) ? "checked" : ""}> ${escapeHtml(item.title)}</label>
           <span class="badge">读${Number(item.total_review_count || 0)}次</span>
         </div>
-        <div class="text-body">${escapeHtml(item.content || "")}</div>
+        <div class="text-excerpt">${escapeHtml(excerpt(item.content || ""))}</div>
         <div class="meta">${meta}</div>
       </article>
     `;
@@ -401,6 +423,11 @@ function renderReport() {
 function formatDate(value) {
   if (!value) return "";
   return String(value).replace("T", " ").slice(0, 16);
+}
+
+function excerpt(value, max = 180) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max)}...` : text;
 }
 
 function escapeHtml(value) {
