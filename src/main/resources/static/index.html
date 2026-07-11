@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>孩子学习复习</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div>
+    <h1>学习复习</h1>
+    <p>录入、复习、出题，一天一个小闭环</p>
+  </div>
+  <button id="refreshBtn" class="icon-btn">刷新</button>
+</header>
+
+<main>
+  <section class="summary">
+    <div><strong id="todayCount">0</strong><span>今日待复习</span></div>
+    <div><strong id="itemCount">0</strong><span>学习项</span></div>
+    <div><strong id="weakCount">0</strong><span>薄弱项</span></div>
+  </section>
+
+  <nav class="tabs">
+    <button class="active" data-tab="input">录入</button>
+    <button data-tab="review">复习</button>
+    <button data-tab="items">列表</button>
+    <button data-tab="paper">出题</button>
+  </nav>
+
+  <section id="input" class="panel active">
+    <div class="form-grid">
+      <label>孩子<select id="childSelect"></select></label>
+      <label>科目<select id="subjectSelect"></select></label>
+      <label>类别<select id="categorySelect"></select></label>
+      <label>来源<input id="sourceInput" placeholder="例如 Unit 3"></label>
+      <label class="wide">标签<input id="tagsInput" placeholder="英文单词, 易错"></label>
+    </div>
+    <label class="block-label">粘贴内容</label>
+    <textarea id="rawText" rows="7" placeholder="#英文单词 memory %%记忆%%
+efficient: 高效的
+apple 苹果"></textarea>
+    <div class="actions">
+      <button id="parseBtn">解析预览</button>
+      <button id="saveParsedBtn" class="primary">保存解析结果</button>
+    </div>
+    <div id="parsePreview" class="list"></div>
+  </section>
+
+  <section id="review" class="panel">
+    <div id="reviewCard" class="review-card empty">暂无待复习内容</div>
+  </section>
+
+  <section id="items" class="panel">
+    <div class="search-row">
+      <input id="keywordInput" placeholder="搜索标题/答案">
+      <input id="tagFilterInput" placeholder="标签">
+      <button id="searchBtn">搜索</button>
+    </div>
+    <div id="itemsList" class="list"></div>
+  </section>
+
+  <section id="paper" class="panel">
+    <p class="hint">从列表勾选学习项，生成练习卷预览。</p>
+    <div class="actions">
+      <button id="makePaperBtn" class="primary">生成练习卷</button>
+    </div>
+    <div id="paperPreview" class="paper"></div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+server:
+  port: ${PORT:28090}
+
+spring:
+  application:
+    name: student-study
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/student_study?useUnicode=true&characterEncoding=utf8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
+    username: ${SPRING_DATASOURCE_USERNAME:student_study}
+    password: ${SPRING_DATASOURCE_PASSWORD:student_study}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+
+logging:
+  level:
+    root: INFO
+    com.momuying.studentstudy: INFO
