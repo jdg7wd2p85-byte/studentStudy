@@ -27,7 +27,11 @@ $("searchBtn").onclick = loadItems;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
-$("categorySelect").addEventListener("change", syncSubjectWithCategory);
+$("categorySelect").addEventListener("change", () => {
+  syncSubjectWithCategory();
+  syncListFilterWithCategory();
+  loadItems();
+});
 $("subjectFilterSelect").addEventListener("change", () => {
   renderCategoryFilter();
   loadItems();
@@ -81,6 +85,16 @@ function syncSubjectWithCategory() {
   if (category?.subject_id) {
     $("subjectSelect").value = String(category.subject_id);
   }
+}
+
+function syncListFilterWithCategory() {
+  const category = selectedCategory();
+  if (!category) return;
+  if (category.subject_id) {
+    $("subjectFilterSelect").value = String(category.subject_id);
+  }
+  renderCategoryFilter();
+  $("categoryFilterSelect").value = String(category.id);
 }
 
 async function parseInput() {
