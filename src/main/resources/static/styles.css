@@ -15,14 +15,16 @@
   --danger: #bf4d43;
   --ok: #2f8a4f;
   --shadow: 0 8px 18px rgba(47, 113, 76, 0.12);
+  --soft-pink: #ffd8d2;
+  --soft-mint: #c7efd8;
 }
 
 * { box-sizing: border-box; }
 body {
   margin: 0;
   background:
-    linear-gradient(135deg, rgba(155, 215, 229, 0.28) 0 25%, transparent 25% 50%, rgba(255, 253, 244, 0.6) 50% 75%, transparent 75%) 0 0 / 36px 36px,
-    linear-gradient(180deg, #dff5ec 0%, var(--bg) 42%, #f4f0cf 100%);
+    linear-gradient(135deg, rgba(155, 215, 229, 0.36) 0 25%, transparent 25% 50%, rgba(255, 216, 210, 0.34) 50% 75%, transparent 75%) 0 0 / 34px 34px,
+    linear-gradient(180deg, #dff8ee 0%, var(--bg) 42%, #fff2b8 100%);
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   min-height: 100vh;
@@ -33,9 +35,9 @@ body {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 16px 14px;
-  background: rgba(255, 253, 244, 0.94);
-  border-bottom: 2px solid var(--line);
-  box-shadow: 0 3px 0 rgba(63, 143, 98, 0.12);
+  background: linear-gradient(90deg, rgba(199, 239, 216, 0.96), rgba(255, 253, 244, 0.96) 58%, rgba(255, 216, 210, 0.96));
+  border-bottom: 2px solid #8ecfb1;
+  box-shadow: 0 4px 0 rgba(63, 143, 98, 0.16);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -67,8 +69,10 @@ main { max-width: 840px; margin: 0 auto; padding: 16px 14px 28px; }
   padding: 14px;
   border-bottom: 4px solid rgba(63, 143, 98, 0.16);
 }
+.summary div:nth-child(1) { background: linear-gradient(180deg, #fffdf4, #e3f7ff); }
 .summary div:nth-child(2) { border-bottom-color: rgba(155, 215, 229, 0.7); }
-.summary div:nth-child(3) { border-bottom-color: rgba(242, 139, 130, 0.5); }
+.summary div:nth-child(2) { background: linear-gradient(180deg, #fffdf4, #e7f7dd); }
+.summary div:nth-child(3) { background: linear-gradient(180deg, #fffdf4, #ffe7dd); border-bottom-color: rgba(242, 139, 130, 0.5); }
 .summary strong { display: block; font-size: 25px; color: var(--brand-dark); }
 .summary span { color: var(--muted); font-size: 13px; }
 .module-stats {
@@ -78,12 +82,20 @@ main { max-width: 840px; margin: 0 auto; padding: 16px 14px 28px; }
   margin-bottom: 12px;
 }
 .module-chip {
-  background: rgba(255, 253, 244, 0.92);
+  background: linear-gradient(180deg, rgba(255, 253, 244, 0.96), rgba(223, 242, 222, 0.92));
   border: 1px solid var(--line);
   border-left: 5px solid var(--brand);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(47, 113, 76, 0.08);
   padding: 10px;
+}
+.module-chip:nth-child(2n) {
+  background: linear-gradient(180deg, rgba(255, 253, 244, 0.96), rgba(227, 247, 255, 0.92));
+  border-left-color: var(--sky);
+}
+.module-chip:nth-child(3n) {
+  background: linear-gradient(180deg, rgba(255, 253, 244, 0.96), rgba(255, 232, 177, 0.92));
+  border-left-color: var(--sun);
 }
 .module-chip span {
   color: var(--muted);
@@ -116,7 +128,7 @@ button {
   touch-action: manipulation;
 }
 button.active, button.primary {
-  background: var(--brand);
+  background: linear-gradient(180deg, #59ad76, var(--brand));
   border-color: var(--brand);
   color: white;
 }
@@ -133,7 +145,10 @@ button:active {
 .icon-btn { min-width: 60px; }
 
 .panel { display: none; padding: 14px; }
-.panel.active { display: block; }
+.panel.active {
+  display: block;
+  background: linear-gradient(180deg, rgba(255, 253, 244, 0.98), rgba(239, 249, 238, 0.98));
+}
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -165,11 +180,14 @@ textarea { resize: vertical; line-height: 1.5; }
 .list { display: grid; gap: 10px; }
 .item {
   border: 1px solid var(--line);
+  border-left: 5px solid var(--sky);
   border-radius: 8px;
   padding: 12px;
-  background: var(--paper);
+  background: linear-gradient(180deg, #ffffff, #fbfff7);
   box-shadow: 0 4px 12px rgba(47, 113, 76, 0.08);
 }
+.item:nth-child(2n) { border-left-color: var(--sun); }
+.item:nth-child(3n) { border-left-color: var(--coral); }
 .item-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
 .item h3 { margin: 0; font-size: 17px; }
 .meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
@@ -178,13 +196,18 @@ textarea { resize: vertical; line-height: 1.5; }
   display: inline-block;
   padding: 4px 8px;
   border-radius: 999px;
-  background: var(--brand-weak);
+  background: linear-gradient(180deg, #fff1b7, var(--brand-weak));
   color: var(--brand-dark);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
 }
-.search-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; margin-bottom: 12px; }
+.search-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr auto;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 .selection-bar {
   align-items: center;
   background: rgba(223, 242, 222, 0.72);
@@ -208,7 +231,7 @@ textarea { resize: vertical; line-height: 1.5; }
 .review-card { min-height: 280px; padding: 18px; }
 .review-card.empty { color: var(--muted); display: grid; place-items: center; }
 .flashcard {
-  background: var(--paper);
+  background: linear-gradient(180deg, #ffffff, #fff8d8);
   border: 1px solid var(--line);
   border-bottom: 5px solid rgba(155, 215, 229, 0.72);
   border-radius: 8px;
@@ -243,7 +266,7 @@ textarea { resize: vertical; line-height: 1.5; }
   border-color: #dbaf34;
 }
 .answer-panel {
-  background: rgba(223, 242, 222, 0.7);
+  background: linear-gradient(180deg, rgba(223, 242, 222, 0.82), rgba(227, 247, 255, 0.82));
   border: 1px solid var(--line);
   border-radius: 8px;
   margin-top: 12px;
@@ -271,7 +294,7 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   grid-template-columns: repeat(2, 1fr);
 }
 .report-grid div {
-  background: var(--paper);
+  background: linear-gradient(180deg, #ffffff, #effbee);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
@@ -294,7 +317,7 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 }
 .report-row {
   align-items: center;
-  background: var(--paper);
+  background: linear-gradient(180deg, #ffffff, #fbfff7);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: flex;

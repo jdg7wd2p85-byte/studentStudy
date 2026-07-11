@@ -84,6 +84,7 @@ public class LearningController {
     @GetMapping("/items")
     public ApiResponse<List<Map<String, Object>>> items(
             @RequestParam(required = false) Long childId,
+            @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String tag
@@ -99,6 +100,10 @@ public class LearningController {
         if (childId != null) {
             sql.append(" AND i.child_id = ?");
             args.add(childId);
+        }
+        if (subjectId != null) {
+            sql.append(" AND i.subject_id = ?");
+            args.add(subjectId);
         }
         if (categoryId != null) {
             sql.append(" AND i.category_id = ?");

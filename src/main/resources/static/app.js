@@ -47,11 +47,14 @@ function renderCatalog() {
   fillSelect("childSelect", state.catalog.children, "name");
   fillSelect("subjectSelect", state.catalog.subjects, "name");
   fillSelect("categorySelect", state.catalog.categories, "name");
+  fillSelect("subjectFilterSelect", state.catalog.subjects, "name", "全部科目");
+  fillSelect("categoryFilterSelect", state.catalog.categories, "name", "全部类别");
 }
 
-function fillSelect(id, rows, labelKey) {
+function fillSelect(id, rows, labelKey, emptyLabel = "") {
   const el = $(id);
-  el.innerHTML = rows.map((row) => `<option value="${row.id}">${escapeHtml(row[labelKey])}</option>`).join("");
+  const emptyOption = emptyLabel ? `<option value="">${escapeHtml(emptyLabel)}</option>` : "";
+  el.innerHTML = emptyOption + rows.map((row) => `<option value="${row.id}">${escapeHtml(row[labelKey])}</option>`).join("");
 }
 
 async function parseInput() {
@@ -114,6 +117,8 @@ async function saveParsed() {
 async function loadItems() {
   const params = new URLSearchParams();
   if ($("keywordInput")?.value) params.set("keyword", $("keywordInput").value);
+  if ($("subjectFilterSelect")?.value) params.set("subjectId", $("subjectFilterSelect").value);
+  if ($("categoryFilterSelect")?.value) params.set("categoryId", $("categoryFilterSelect").value);
   if ($("tagFilterInput")?.value) params.set("tag", $("tagFilterInput").value);
   state.items = await api(`/api/items?${params}`);
   renderItems();
@@ -143,7 +148,7 @@ function renderItems() {
         <span class="badge">背${Number(item.total_review_count || 0)}次</span>
       </div>
       <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
-      <div class="meta">${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
+      <div class="meta">${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}</div>
     </article>
   `).join("");
   document.querySelectorAll("#itemsList input[type=checkbox]").forEach((input) => {
