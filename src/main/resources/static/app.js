@@ -82,7 +82,7 @@ function renderParsed() {
         <h3>${escapeHtml(item.title)}</h3>
         <span class="badge">${Math.round(item.confidence * 100)}%</span>
       </div>
-      <div class="answer">${escapeHtml(item.answer || "待补充答案")}</div>
+      <div class="answer ${item.displayMode === "LONG_TEXT" ? "long-text" : ""}">${escapeHtml(item.content || item.answer || "待补充答案")}</div>
       <div class="meta">${escapeHtml(item.rawText)}</div>
       ${item.warnings?.length ? `<div class="meta">${escapeHtml(item.warnings.join("；"))}</div>` : ""}
     </article>

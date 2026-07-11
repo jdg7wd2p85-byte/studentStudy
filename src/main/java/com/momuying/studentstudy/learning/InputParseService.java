@@ -21,6 +21,9 @@ public class InputParseService {
         if (request.rawText() == null || request.rawText().isBlank()) {
             return List.of();
         }
+        if ("TEXT".equals(valueOrDefault(request.categoryCode(), "WORD"))) {
+            return List.of(parseLine(request.rawText().trim(), request));
+        }
         List<ParsedItem> items = new ArrayList<>();
         for (String line : request.rawText().split("\\R")) {
             String trimmed = line.trim();

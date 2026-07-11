@@ -67,4 +67,22 @@ class InputParseServiceTest {
         assertThat(items.get(0).answer()).isEmpty();
         assertThat(items.get(0).warnings()).isEmpty();
     }
+
+    @Test
+    void keepsMultiLineChineseTextAsOneItem() {
+        String text = """
+                春
+                朱自清
+                盼望着，盼望着，东风来了，春天的脚步近了。
+                一切都像刚睡醒的样子，欣欣然张开了眼。
+                """.trim();
+
+        List<ParsedItem> items = service.parse(new ParseRequest(
+                1L, 2L, 3L, "TEXT", text, "", "语文"));
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).content()).isEqualTo(text);
+        assertThat(items.get(0).title()).contains("春");
+        assertThat(items.get(0).displayMode()).isEqualTo("LONG_TEXT");
+    }
 }
