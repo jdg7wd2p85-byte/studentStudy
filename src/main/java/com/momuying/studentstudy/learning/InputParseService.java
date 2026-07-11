@@ -108,7 +108,11 @@ public class InputParseService {
     }
 
     private String summarize(String line) {
-        String value = line.trim();
+        String value = line.lines()
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .findFirst()
+                .orElse(line.trim());
         if (value.length() <= 60) {
             return value;
         }

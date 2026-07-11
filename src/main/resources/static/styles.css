@@ -197,6 +197,7 @@ textarea { resize: vertical; line-height: 1.5; }
 .item h3 { margin: 0; font-size: 17px; }
 .meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
 .answer { margin-top: 8px; color: #365a4f; line-height: 1.5; }
+.long-text { white-space: pre-wrap; }
 .badge {
   display: inline-block;
   padding: 4px 8px;

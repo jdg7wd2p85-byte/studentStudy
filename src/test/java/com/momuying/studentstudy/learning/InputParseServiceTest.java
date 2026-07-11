@@ -82,7 +82,7 @@ class InputParseServiceTest {
 
         assertThat(items).hasSize(1);
         assertThat(items.get(0).content()).isEqualTo(text);
-        assertThat(items.get(0).title()).contains("春");
+        assertThat(items.get(0).title()).isEqualTo("春");
         assertThat(items.get(0).displayMode()).isEqualTo("LONG_TEXT");
     }
 }
