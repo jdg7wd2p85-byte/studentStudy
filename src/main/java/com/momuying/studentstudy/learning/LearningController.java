@@ -50,6 +50,12 @@ public class LearningController {
         LocalDateTime now = LocalDateTime.now();
         String itemType = valueOrDefault(request.itemType(), categoryCode(request.categoryId()));
         String displayMode = valueOrDefault(request.displayMode(), categoryDisplayMode(request.categoryId()));
+        String title = required(request.title(), "标题不能为空");
+        String answer = blankToNull(request.answer());
+        Long existingId = findDuplicateId(request.childId(), request.categoryId(), title, answer);
+        if (existingId != null) {
+            return ApiResponse.ok(item(existingId));
+        }
         String tags = request.tags() == null ? "" : String.join(",", request.tags());
         jdbcTemplate.update("""
                 INSERT INTO learning_items(
@@ -59,7 +65,7 @@ public class LearningController {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 request.childId(), request.subjectId(), request.categoryId(), itemType, displayMode,
-                required(request.title(), "标题不能为空"), request.prompt(), request.content(), request.answer(),
+                title, request.prompt(), request.content(), answer,
                 request.explanation(), toJson(request.extraFields()), request.source(), tags,
                 Timestamp.valueOf(now), Timestamp.valueOf(scheduleService.initialNextReview(now)));
         Long id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
@@ -173,6 +179,21 @@ public class LearningController {
                 """, id);
     }
 
+    private Long findDuplicateId(Long childId, Long categoryId, String title, String answer) {
+        List<Long> ids = jdbcTemplate.queryForList("""
+                SELECT id
+                FROM learning_items
+                WHERE child_id = ?
+                  AND category_id = ?
+                  AND LOWER(title) = LOWER(?)
+                  AND COALESCE(answer, '') = COALESCE(?, '')
+                  AND status <> 'ARCHIVED'
+                ORDER BY id ASC
+                LIMIT 1
+                """, Long.class, childId, categoryId, title, answer);
+        return ids.isEmpty() ? null : ids.get(0);
+    }
+
     private String categoryCode(Long categoryId) {
         return jdbcClient.sql("SELECT code FROM item_categories WHERE id = ?")
                 .param(categoryId).query(String.class).single();
@@ -195,6 +216,10 @@ public class LearningController {
             throw new IllegalArgumentException(message);
         }
         return value.trim();
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private String valueOrDefault(String value, String defaultValue) {

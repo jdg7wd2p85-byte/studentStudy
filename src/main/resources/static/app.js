@@ -105,7 +105,7 @@ async function saveParsed() {
   state.parsed = [];
   renderParsed();
   await loadAll();
-  alert("保存成功");
+  alert("保存完成，重复项会自动复用已有记录");
 }
 
 async function loadItems() {
