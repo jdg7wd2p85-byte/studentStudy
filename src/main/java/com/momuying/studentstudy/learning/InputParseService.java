@@ -80,8 +80,12 @@ public class InputParseService {
             }
         }
 
-        warnings.add("未识别出明确答案，请确认后保存");
         String title = summarize(line);
+        if ("TEXT".equals(categoryCode)) {
+            return new ParsedItem(line, categoryCode, displayMode, title, title, line, "", null,
+                    distinct(tags), extra, 0.8, warnings);
+        }
+        warnings.add("未识别出明确答案，请确认后保存");
         return new ParsedItem(line, categoryCode, displayMode, title, title, line, "", null,
                 distinct(tags), extra, 0.35, warnings);
     }

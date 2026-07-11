@@ -65,5 +65,6 @@ class InputParseServiceTest {
         assertThat(items.get(0).displayMode()).isEqualTo("LONG_TEXT");
         assertThat(items.get(0).content()).isEqualTo(text);
         assertThat(items.get(0).answer()).isEmpty();
+        assertThat(items.get(0).warnings()).isEmpty();
     }
 }
