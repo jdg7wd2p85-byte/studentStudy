@@ -149,8 +149,10 @@ public class LearningController {
         }
         if (reviewStatus != null && !reviewStatus.isBlank()) {
             List<Integer> ratings = new ArrayList<>();
+            boolean includeUnreviewed = false;
             for (String status : reviewStatus.split(",")) {
                 switch (status.trim()) {
+                    case "unreviewed" -> includeUnreviewed = true;
                     case "forgot" -> ratings.add(0);
                     case "vague" -> ratings.add(1);
                     case "ok" -> ratings.add(2);
@@ -159,17 +161,24 @@ public class LearningController {
                     }
                 }
             }
-            if (!ratings.isEmpty()) {
-                sql.append("""
-                         AND (
-                           SELECT r.rating
-                           FROM review_records r
-                           WHERE r.item_id = i.id
-                           ORDER BY r.reviewed_at DESC, r.id DESC
-                           LIMIT 1
-                         ) IN (
-                        """);
-                sql.append(String.join(",", ratings.stream().map(rating -> "?").toList()));
+            if (includeUnreviewed || !ratings.isEmpty()) {
+                List<String> reviewConditions = new ArrayList<>();
+                if (includeUnreviewed) {
+                    reviewConditions.add("i.total_review_count = 0");
+                }
+                if (!ratings.isEmpty()) {
+                    reviewConditions.add("""
+                            (
+                              SELECT r.rating
+                              FROM review_records r
+                              WHERE r.item_id = i.id
+                              ORDER BY r.reviewed_at DESC, r.id DESC
+                              LIMIT 1
+                            ) IN (
+                            """ + String.join(",", ratings.stream().map(rating -> "?").toList()) + ")");
+                }
+                sql.append(" AND (");
+                sql.append(String.join(" OR ", reviewConditions));
                 sql.append(")");
                 args.addAll(ratings);
             }
