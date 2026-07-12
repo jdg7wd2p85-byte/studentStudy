@@ -4,6 +4,7 @@ const state = {
   items: [],
   today: [],
   report: null,
+  reviews: [],
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set()
@@ -21,6 +22,11 @@ document.querySelectorAll(".tabs button").forEach((btn) => {
 });
 
 $("refreshBtn").onclick = loadAll;
+$("rulesBtn").onclick = () => $("rulesModal").classList.remove("hidden");
+$("rulesCloseBtn").onclick = () => $("rulesModal").classList.add("hidden");
+$("rulesModal").onclick = (event) => {
+  if (event.target.id === "rulesModal") $("rulesModal").classList.add("hidden");
+};
 $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
@@ -37,6 +43,9 @@ $("subjectFilterSelect").addEventListener("change", () => {
   loadItems();
 });
 $("categoryFilterSelect").addEventListener("change", loadItems);
+document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
+  input.addEventListener("change", loadItems);
+});
 $("pasteBox").addEventListener("input", syncPasteBoxToRawText);
 $("pasteBox").addEventListener("paste", pastePlainText);
 $("pasteBox").addEventListener("click", () => $("pasteBox").focus());
@@ -54,7 +63,7 @@ async function api(path, options = {}) {
 async function loadAll() {
   state.catalog = await api("/api/catalog");
   renderCatalog();
-  await Promise.all([loadItems(), loadToday(), loadReport()]);
+  await Promise.all([loadItems(), loadToday(), loadReport(), loadReviewRecords()]);
 }
 
 function renderCatalog() {
@@ -194,6 +203,8 @@ async function loadItems() {
   if ($("subjectFilterSelect")?.value) params.set("subjectId", $("subjectFilterSelect").value);
   if ($("categoryFilterSelect")?.value) params.set("categoryId", $("categoryFilterSelect").value);
   if ($("tagFilterInput")?.value) params.set("tag", $("tagFilterInput").value);
+  const statuses = selectedStatuses();
+  if (statuses.length) params.set("masteryStatus", statuses.join(","));
   state.items = await api(`/api/items?${params}`);
   renderItems();
   updateSelectionBar();
@@ -212,6 +223,11 @@ async function loadReport() {
   updateSummary();
   renderModuleStats();
   renderReport();
+}
+
+async function loadReviewRecords() {
+  state.reviews = await api("/api/reports/reviews");
+  renderReviewHistory();
 }
 
 function renderItems() {
@@ -316,7 +332,7 @@ async function submitReview(id, rating) {
   });
   state.reviewIndex += 1;
   state.revealAnswer = false;
-  await Promise.all([loadItems(), loadToday(), loadReport()]);
+  await Promise.all([loadItems(), loadToday(), loadReport(), loadReviewRecords()]);
 }
 
 async function makePaper() {
@@ -361,7 +377,7 @@ async function deleteSelectedItems() {
     body: JSON.stringify({ itemIds })
   });
   itemIds.forEach((id) => state.selected.delete(id));
-  await Promise.all([loadItems(), loadToday(), loadReport()]);
+  await Promise.all([loadItems(), loadToday(), loadReport(), loadReviewRecords()]);
   alert(`已删除 ${result.deleted ?? 0} 项`);
 }
 
@@ -381,6 +397,11 @@ function updateSummary() {
   $("itemCount").textContent = overview.total_items ?? 0;
   $("weakCount").textContent = overview.weak_count ?? 0;
   updateSelectionBar();
+}
+
+function selectedStatuses() {
+  return [...document.querySelectorAll("#statusFilters input[type=checkbox]:checked")]
+    .map((input) => input.value);
 }
 
 function updateSelectionBar() {
@@ -412,6 +433,7 @@ function renderModuleStats() {
 function renderReport() {
   if (!state.report) return;
   const overview = state.report.overview || {};
+  const today = state.report.todayReview || {};
   $("reportOverview").innerHTML = `
     <div><strong>${overview.total_items ?? 0}</strong><span>学习项总数</span></div>
     <div><strong>${state.report.dueToday ?? 0}</strong><span>今日待复习</span></div>
@@ -420,6 +442,20 @@ function renderReport() {
     <div><strong>${overview.weak_count ?? 0}</strong><span>薄弱项</span></div>
     <div><strong>${overview.avg_mastery ?? 0}</strong><span>平均掌握分</span></div>
   `;
+  $("todayReport").innerHTML = `
+    <div><strong>${today.item_count ?? 0}</strong><span>今天背了多少个</span></div>
+    <div><strong>${today.review_count ?? 0}</strong><span>今天背诵次数</span></div>
+    <div><strong>${today.mastered_count ?? 0}</strong><span>今天已掌握</span></div>
+    <div><strong>${today.fluent_count ?? 0}</strong><span>今天熟练</span></div>
+    <div><strong>${today.ok_count ?? 0}</strong><span>今天基本会</span></div>
+    <div><strong>${Number(today.forgot_count || 0) + Number(today.vague_count || 0)}</strong><span>今天需加强</span></div>
+  `;
+  $("statusReport").innerHTML = (state.report.statusBuckets || []).map((row) => `
+    <button type="button" onclick="applyStatusFilter('${escapeJs(row.status_key)}')">
+      <span>${escapeHtml(row.status_name)}</span>
+      <strong>${row.item_count}</strong>
+    </button>
+  `).join("");
   $("reportModules").innerHTML = `
     <h3>模块分析</h3>
     ${(state.report.modules || []).map((row) => `
@@ -432,6 +468,34 @@ function renderReport() {
       </article>
     `).join("")}
   `;
+}
+
+function renderReviewHistory() {
+  if (!$("reviewHistory")) return;
+  $("reviewHistory").innerHTML = `
+    <h3>背诵记录</h3>
+    ${state.reviews.length ? state.reviews.map((row) => `
+      <article class="report-row">
+        <div>
+          <strong>${escapeHtml(row.title)}</strong>
+          <span>${formatDate(row.reviewed_at)} / ${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)} / ${ratingLabel(row.rating)}</span>
+        </div>
+        <span class="badge">${row.before_mastery_score} -> ${row.after_mastery_score}</span>
+      </article>
+    `).join("") : `<div class="empty-note">暂无背诵记录</div>`}
+  `;
+}
+
+function applyStatusFilter(status) {
+  document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
+    input.checked = input.value === status;
+  });
+  showTab("items");
+  loadItems();
+}
+
+function ratingLabel(rating) {
+  return ["不会", "模糊", "基本会", "熟练"][Number(rating)] || "未知";
 }
 
 function formatDate(value) {
@@ -451,6 +515,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeJs(value) {
+  return String(value ?? "").replaceAll("\\", "\\\\").replaceAll("'", "\\'");
 }
 
 loadAll().catch((err) => alert(err.message));

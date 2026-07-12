@@ -113,7 +113,8 @@ public class LearningController {
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String tag
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String masteryStatus
     ) {
         StringBuilder sql = new StringBuilder("""
                 SELECT i.*, c.name AS category_name, s.name AS subject_name
@@ -145,6 +146,25 @@ public class LearningController {
         if (tag != null && !tag.isBlank()) {
             sql.append(" AND i.tags LIKE ?");
             args.add("%" + tag.trim() + "%");
+        }
+        if (masteryStatus != null && !masteryStatus.isBlank()) {
+            List<String> statusConditions = new ArrayList<>();
+            for (String status : masteryStatus.split(",")) {
+                switch (status.trim()) {
+                    case "weak" -> statusConditions.add("i.mastery_score < 60");
+                    case "learning" -> statusConditions.add("i.mastery_score >= 60 AND i.mastery_score < 90");
+                    case "mastered" -> statusConditions.add("i.mastery_score >= 90");
+                    case "unreviewed" -> statusConditions.add("i.total_review_count = 0");
+                    case "reviewed" -> statusConditions.add("i.total_review_count > 0");
+                    default -> {
+                    }
+                }
+            }
+            if (!statusConditions.isEmpty()) {
+                sql.append(" AND (");
+                sql.append(String.join(" OR ", statusConditions.stream().map(condition -> "(" + condition + ")").toList()));
+                sql.append(")");
+            }
         }
         sql.append(" ORDER BY i.next_review_at ASC, i.mastery_score ASC, i.id DESC LIMIT 200");
         return ApiResponse.ok(jdbcTemplate.queryForList(sql.toString(), args.toArray()));

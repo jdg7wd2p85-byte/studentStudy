@@ -57,6 +57,60 @@ public class ReportController {
                   AND i.next_review_at <= ?
                 """ + dueChildFilter, Long.class, dueArgs.toArray());
 
+        List<Object> todayArgs = new ArrayList<>();
+        todayArgs.add(Timestamp.valueOf(LocalDateTime.now().toLocalDate().atStartOfDay()));
+        todayArgs.add(Timestamp.valueOf(LocalDateTime.now().plusDays(1).toLocalDate().atStartOfDay()));
+        String todayChildFilter = "";
+        if (childId != null) {
+            todayChildFilter = " AND r.child_id = ?";
+            todayArgs.add(childId);
+        }
+        Map<String, Object> todayReview = jdbcTemplate.queryForMap("""
+                SELECT
+                  COUNT(*) AS review_count,
+                  COUNT(DISTINCT r.item_id) AS item_count,
+                  COALESCE(SUM(CASE WHEN r.rating = 0 THEN 1 ELSE 0 END), 0) AS forgot_count,
+                  COALESCE(SUM(CASE WHEN r.rating = 1 THEN 1 ELSE 0 END), 0) AS vague_count,
+                  COALESCE(SUM(CASE WHEN r.rating = 2 THEN 1 ELSE 0 END), 0) AS ok_count,
+                  COALESCE(SUM(CASE WHEN r.rating = 3 THEN 1 ELSE 0 END), 0) AS fluent_count,
+                  COUNT(DISTINCT CASE WHEN r.after_mastery_score >= 90 THEN r.item_id END) AS mastered_count
+                FROM review_records r
+                WHERE r.reviewed_at >= ?
+                  AND r.reviewed_at < ?
+                """ + todayChildFilter, todayArgs.toArray());
+
+        List<Map<String, Object>> statusBuckets = jdbcTemplate.queryForList("""
+                SELECT 'weak' AS status_key, '薄弱' AS status_name, COUNT(*) AS item_count
+                FROM learning_items i
+                WHERE i.status <> 'ARCHIVED'
+                  AND i.mastery_score < 60
+                """ + childFilter + """
+                UNION ALL
+                SELECT 'learning', '学习中', COUNT(*)
+                FROM learning_items i
+                WHERE i.status <> 'ARCHIVED'
+                  AND i.mastery_score >= 60
+                  AND i.mastery_score < 90
+                """ + childFilter + """
+                UNION ALL
+                SELECT 'mastered', '已掌握', COUNT(*)
+                FROM learning_items i
+                WHERE i.status <> 'ARCHIVED'
+                  AND i.mastery_score >= 90
+                """ + childFilter + """
+                UNION ALL
+                SELECT 'unreviewed', '未背过', COUNT(*)
+                FROM learning_items i
+                WHERE i.status <> 'ARCHIVED'
+                  AND i.total_review_count = 0
+                """ + childFilter + """
+                UNION ALL
+                SELECT 'reviewed', '已背过', COUNT(*)
+                FROM learning_items i
+                WHERE i.status <> 'ARCHIVED'
+                  AND i.total_review_count > 0
+                """ + childFilter, repeatArgs(args, 5));
+
         List<Map<String, Object>> modules = jdbcTemplate.queryForList("""
                 SELECT
                   s.name AS subject_name,
@@ -78,7 +132,52 @@ public class ReportController {
         return ApiResponse.ok(Map.of(
                 "overview", overview,
                 "dueToday", dueToday == null ? 0 : dueToday,
+                "todayReview", todayReview,
+                "statusBuckets", statusBuckets,
                 "modules", modules
         ));
+    }
+
+    @GetMapping("/reviews")
+    public ApiResponse<List<Map<String, Object>>> reviews(@RequestParam(required = false) Long childId) {
+        List<Object> args = new ArrayList<>();
+        String childFilter = "";
+        if (childId != null) {
+            childFilter = " AND r.child_id = ?";
+            args.add(childId);
+        }
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT
+                  r.id,
+                  r.item_id,
+                  r.reviewed_at,
+                  r.rating,
+                  r.before_mastery_score,
+                  r.after_mastery_score,
+                  r.before_stage,
+                  r.after_stage,
+                  r.next_review_at,
+                  i.title,
+                  i.display_mode,
+                  c.name AS category_name,
+                  s.name AS subject_name
+                FROM review_records r
+                JOIN learning_items i ON i.id = r.item_id
+                JOIN item_categories c ON c.id = i.category_id
+                JOIN subjects s ON s.id = i.subject_id
+                WHERE i.status <> 'ARCHIVED'
+                """ + childFilter + """
+                ORDER BY r.reviewed_at DESC, r.id DESC
+                LIMIT 100
+                """, args.toArray());
+        return ApiResponse.ok(rows);
+    }
+
+    private Object[] repeatArgs(List<Object> args, int times) {
+        List<Object> repeated = new ArrayList<>();
+        for (int i = 0; i < times; i++) {
+            repeated.addAll(args);
+        }
+        return repeated.toArray();
     }
 }

@@ -43,6 +43,10 @@ body {
   z-index: 10;
   backdrop-filter: blur(12px);
 }
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
 
 h1 {
   margin: 0;
@@ -273,6 +277,27 @@ textarea { resize: vertical; line-height: 1.5; }
   gap: 8px;
   margin-bottom: 12px;
 }
+.status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.status-filters label {
+  align-items: center;
+  background: rgba(255, 253, 244, 0.8);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--brand-dark);
+  display: inline-flex;
+  font-size: 13px;
+  gap: 4px;
+  padding: 6px 9px;
+}
+.status-filters input {
+  margin: 0;
+  width: auto;
+}
 .selection-bar {
   align-items: center;
   background: rgba(223, 242, 222, 0.72);
@@ -380,6 +405,26 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 .report-list {
   margin-top: 14px;
 }
+.status-report {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  margin-top: 12px;
+}
+.status-report button {
+  background: linear-gradient(180deg, #fffdf4, #e7f7dd);
+  min-height: 56px;
+  text-align: left;
+}
+.status-report span,
+.status-report strong {
+  display: block;
+}
+.status-report strong {
+  color: var(--brand-dark);
+  font-size: 20px;
+  margin-top: 2px;
+}
 .report-list h3 {
   font-size: 17px;
   margin: 0 0 10px;
@@ -404,6 +449,49 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   display: block;
   font-size: 12px;
   margin-top: 4px;
+}
+.empty-note {
+  background: rgba(255, 253, 244, 0.72);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  padding: 14px;
+}
+.modal {
+  align-items: center;
+  background: rgba(40, 73, 63, 0.34);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 30;
+}
+.modal.hidden {
+  display: none;
+}
+.modal-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 18px 36px rgba(40, 73, 63, 0.22);
+  max-width: 520px;
+  padding: 14px;
+  width: 100%;
+}
+.modal-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.modal-head h3 {
+  color: var(--brand-dark);
+  margin: 0;
+}
+.rule-list p {
+  line-height: 1.55;
+  margin: 8px 0;
 }
 
 @media (max-width: 560px) {

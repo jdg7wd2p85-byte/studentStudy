@@ -12,7 +12,10 @@
     <h1>学习岛日记</h1>
     <p>录入、复习、出题，每天照看一点点</p>
   </div>
-  <button id="refreshBtn" class="icon-btn">刷新</button>
+  <div class="header-actions">
+    <button id="rulesBtn" class="icon-btn">?</button>
+    <button id="refreshBtn" class="icon-btn">刷新</button>
+  </div>
 </header>
 
 <main>
@@ -63,6 +66,13 @@ apple 苹果"></div>
       <input id="tagFilterInput" placeholder="标签">
       <button id="searchBtn">搜索</button>
     </div>
+    <div id="statusFilters" class="status-filters">
+      <label><input type="checkbox" value="weak"> 薄弱</label>
+      <label><input type="checkbox" value="learning"> 学习中</label>
+      <label><input type="checkbox" value="mastered"> 已掌握</label>
+      <label><input type="checkbox" value="unreviewed"> 未背过</label>
+      <label><input type="checkbox" value="reviewed"> 已背过</label>
+    </div>
     <div class="selection-bar">
       <span id="selectedCount">已选 0 项</span>
       <div class="selection-actions">
@@ -83,9 +93,30 @@ apple 苹果"></div>
 
   <section id="report" class="panel">
     <div id="reportOverview" class="report-grid"></div>
+    <div id="todayReport" class="report-grid"></div>
+    <div id="statusReport" class="status-report"></div>
     <div id="reportModules" class="report-list"></div>
+    <div id="reviewHistory" class="report-list"></div>
   </section>
 </main>
+
+<div id="rulesModal" class="modal hidden">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>掌握分规则</h3>
+      <button id="rulesCloseBtn" class="icon-btn">关闭</button>
+    </div>
+    <div class="rule-list">
+      <p>初始掌握分为 20 分，新内容会立即进入今日复习。</p>
+      <p>不会：-20 分，下一次安排到明天。</p>
+      <p>模糊：-8 分，按当前阶段安排。</p>
+      <p>基本会：+8 分，进入下一阶段。</p>
+      <p>熟练：+12 分，阶段前进更快。</p>
+      <p>掌握分达到 90 分及以上，视为已掌握。</p>
+      <p>复习间隔：1 天、2 天、4 天、7 天、15 天、30 天、60 天。</p>
+    </div>
+  </div>
+</div>
 
 <script src="/app.js"></script>
 </body>
