@@ -129,12 +129,35 @@ public class ReportController {
                 LIMIT 20
                 """, args.toArray());
 
+        List<Object> dailyArgs = new ArrayList<>();
+        dailyArgs.add(Timestamp.valueOf(LocalDateTime.now().minusDays(59).toLocalDate().atStartOfDay()));
+        String dailyChildFilter = "";
+        if (childId != null) {
+            dailyChildFilter = " AND r.child_id = ?";
+            dailyArgs.add(childId);
+        }
+        List<Map<String, Object>> dailyTrend = jdbcTemplate.queryForList("""
+                SELECT
+                  DATE(r.reviewed_at) AS review_date,
+                  COUNT(*) AS review_count,
+                  COUNT(DISTINCT r.item_id) AS item_count,
+                  COUNT(DISTINCT CASE WHEN r.after_mastery_score >= 90 THEN r.item_id END) AS mastered_count
+                FROM review_records r
+                JOIN learning_items i ON i.id = r.item_id
+                WHERE i.status <> 'ARCHIVED'
+                  AND r.reviewed_at >= ?
+                """ + dailyChildFilter + """
+                GROUP BY DATE(r.reviewed_at)
+                ORDER BY review_date DESC
+                """, dailyArgs.toArray());
+
         return ApiResponse.ok(Map.of(
                 "overview", overview,
                 "dueToday", dueToday == null ? 0 : dueToday,
                 "todayReview", todayReview,
                 "statusBuckets", statusBuckets,
-                "modules", modules
+                "modules", modules,
+                "dailyTrend", dailyTrend
         ));
     }
 

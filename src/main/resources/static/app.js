@@ -462,40 +462,32 @@ function renderModuleStats() {
 
 function renderReport() {
   if (!state.report) return;
-  const overview = state.report.overview || {};
-  const today = state.report.todayReview || {};
-  $("reportOverview").innerHTML = `
-    <div><strong>${overview.total_items ?? 0}</strong><span>学习项总数</span></div>
-    <div><strong>${overview.mastered_count ?? 0}</strong><span>已掌握项</span></div>
-    <div><strong>${overview.total_reviews ?? 0}</strong><span>累计背诵次数</span></div>
-    <div><strong>${overview.weak_count ?? 0}</strong><span>未掌握项</span></div>
-    <div><strong>${overview.avg_mastery ?? 0}</strong><span>平均掌握分</span></div>
+  const days = buildDailyTrend(state.report.dailyTrend || []);
+  const maxReviews = Math.max(1, ...days.map((day) => Number(day.review_count || 0)));
+  $("reviewHeatmap").innerHTML = `
+    <h3>最近 60 天背诵热力图</h3>
+    <div class="heatmap-grid">
+      ${days.map((day) => `
+        <div class="heat-cell level-${heatLevel(day.review_count, maxReviews)}" title="${escapeHtml(day.date)} 背 ${day.item_count} 个，掌握 ${day.mastered_count} 个">
+          <span>${Number(day.date.slice(-2))}</span>
+        </div>
+      `).join("")}
+    </div>
+    <div class="heatmap-legend">
+      <span>少</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>多</span>
+    </div>
   `;
-  $("todayReport").innerHTML = `
-    <div><strong>${today.item_count ?? 0}</strong><span>今天背了多少个</span></div>
-    <div><strong>${today.review_count ?? 0}</strong><span>今天背诵次数</span></div>
-    <div><strong>${today.mastered_count ?? 0}</strong><span>今天达到掌握</span></div>
-    <div><strong>${today.fluent_count ?? 0}</strong><span>今天熟练</span></div>
-    <div><strong>${today.ok_count ?? 0}</strong><span>今天基本会</span></div>
-    <div><strong>${Number(today.forgot_count || 0) + Number(today.vague_count || 0)}</strong><span>今天需加强</span></div>
-  `;
-  $("statusReport").innerHTML = (state.report.statusBuckets || []).map((row) => `
-    <button type="button" onclick="applyStatusFilter('${escapeJs(row.status_key)}')">
-      <span>${escapeHtml(row.status_name)}</span>
-      <strong>${row.item_count}</strong>
-    </button>
-  `).join("");
-  $("reportModules").innerHTML = `
-    <h3>模块分析</h3>
-    ${(state.report.modules || []).map((row) => `
+  $("dailyReviewList").innerHTML = `
+    <h3>每日背诵记录</h3>
+    ${days.filter((day) => Number(day.review_count || 0) > 0).map((day) => `
       <article class="report-row">
         <div>
-          <strong>${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)}</strong>
-          <span>${row.item_count} 项 / 背 ${row.review_count} 次 / 薄弱 ${row.weak_count} 项</span>
+          <strong>${escapeHtml(day.date)}</strong>
+          <span>背诵 ${day.item_count} 个 / 共 ${day.review_count} 次</span>
         </div>
-        <span class="badge">均分 ${row.avg_mastery}</span>
+        <span class="badge">掌握 ${day.mastered_count} 个</span>
       </article>
-    `).join("")}
+    `).join("") || `<div class="empty-note">最近 60 天还没有背诵记录</div>`}
   `;
 }
 
@@ -505,6 +497,38 @@ function applyStatusFilter(status) {
   });
   showTab("items");
   loadItems();
+}
+
+function buildDailyTrend(rows) {
+  const byDate = new Map(rows.map((row) => [String(row.review_date), row]));
+  const days = [];
+  const today = new Date();
+  for (let i = 59; i >= 0; i -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    const key = localDateKey(date);
+    const row = byDate.get(key) || {};
+    days.push({
+      date: key,
+      review_count: Number(row.review_count || 0),
+      item_count: Number(row.item_count || 0),
+      mastered_count: Number(row.mastered_count || 0)
+    });
+  }
+  return days;
+}
+
+function heatLevel(value, maxValue) {
+  const count = Number(value || 0);
+  if (!count) return 0;
+  return Math.min(4, Math.max(1, Math.ceil((count / maxValue) * 4)));
+}
+
+function localDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function ratingLabel(rating) {
