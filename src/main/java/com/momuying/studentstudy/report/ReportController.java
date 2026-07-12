@@ -146,12 +146,12 @@ public class ReportController {
         List<Object> args = new ArrayList<>();
         String childFilter = "";
         if (childId != null) {
-            childFilter = " AND r.child_id = ?";
+            childFilter = " AND r.child_id = ? ";
             args.add(childId);
         }
         String itemFilter = "";
         if (itemId != null) {
-            itemFilter = " AND r.item_id = ?";
+            itemFilter = " AND r.item_id = ? ";
             args.add(itemId);
         }
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
