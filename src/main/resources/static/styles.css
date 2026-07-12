@@ -418,10 +418,18 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   font-size: 17px;
   margin: 0 0 10px;
 }
+.heat-month {
+  margin-top: 12px;
+}
+.heat-month h4 {
+  color: var(--brand-dark);
+  font-size: 14px;
+  margin: 0 0 7px;
+}
 .heatmap-grid {
   display: grid;
   gap: 5px;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(7, 1fr);
 }
 .heat-cell {
   aspect-ratio: 1;
@@ -501,6 +509,27 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   font-size: 12px;
   margin-top: 4px;
 }
+.category-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.category-counts .category-pill {
+  border-radius: 999px;
+  color: #ffffff;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 750;
+  margin: 0;
+  padding: 4px 8px;
+}
+.category-pill.color-0 { background: #3f8f62; }
+.category-pill.color-1 { background: #3d8aa8; }
+.category-pill.color-2 { background: #c48028; }
+.category-pill.color-3 { background: #bf4d43; }
+.category-pill.color-4 { background: #7a6bb4; }
+.category-pill.color-5 { background: #5f7f3f; }
 .empty-note {
   background: rgba(255, 253, 244, 0.72);
   border: 1px dashed var(--line);
@@ -563,6 +592,5 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   button { padding: 0 6px; }
   .card-title { font-size: 30px; }
   .report-grid { grid-template-columns: 1fr 1fr; }
-  .heatmap-grid { grid-template-columns: repeat(7, 1fr); }
   .report-row { align-items: flex-start; flex-direction: column; }
 }

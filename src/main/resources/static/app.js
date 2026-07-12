@@ -462,17 +462,23 @@ function renderModuleStats() {
 
 function renderReport() {
   if (!state.report) return;
-  const days = buildDailyTrend(state.report.dailyTrend || []);
+  const days = buildDailyTrend(state.report.dailyTrend || [], state.report.dailyCategories || []);
+  const months = groupDaysByMonth(days);
   const maxReviews = Math.max(1, ...days.map((day) => Number(day.review_count || 0)));
   $("reviewHeatmap").innerHTML = `
     <h3>最近 60 天背诵热力图</h3>
-    <div class="heatmap-grid">
-      ${days.map((day) => `
-        <div class="heat-cell level-${heatLevel(day.review_count, maxReviews)}" title="${escapeHtml(day.date)} 背 ${day.item_count} 个，掌握 ${day.mastered_count} 个">
-          <span>${Number(day.date.slice(-2))}</span>
+    ${months.map((month) => `
+      <section class="heat-month">
+        <h4>${escapeHtml(month.label)}</h4>
+        <div class="heatmap-grid">
+          ${month.days.map((day) => `
+            <div class="heat-cell level-${heatLevel(day.review_count, maxReviews)}" title="${escapeHtml(day.date)} 背 ${day.item_count} 个，${day.category_count} 类，掌握 ${day.mastered_count} 个">
+              <span>${Number(day.date.slice(-2))}</span>
+            </div>
+          `).join("")}
         </div>
-      `).join("")}
-    </div>
+      </section>
+    `).join("")}
     <div class="heatmap-legend">
       <span>少</span><i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i><span>多</span>
     </div>
@@ -483,7 +489,14 @@ function renderReport() {
       <article class="report-row">
         <div>
           <strong>${escapeHtml(day.date)}</strong>
-          <span>背诵 ${day.item_count} 个 / 共 ${day.review_count} 次</span>
+          <span>背诵 ${day.item_count} 个 / ${day.category_count} 类 / 共 ${day.review_count} 次</span>
+          <div class="category-counts">
+            ${day.categories.map((category, index) => `
+              <span class="category-pill color-${index % 6}">
+                ${escapeHtml(category.subject_name)} / ${escapeHtml(category.category_name)} ${category.item_count}
+              </span>
+            `).join("")}
+          </div>
         </div>
         <span class="badge">掌握 ${day.mastered_count} 个</span>
       </article>
@@ -499,8 +512,20 @@ function applyStatusFilter(status) {
   loadItems();
 }
 
-function buildDailyTrend(rows) {
+function buildDailyTrend(rows, categoryRows) {
   const byDate = new Map(rows.map((row) => [String(row.review_date), row]));
+  const categoriesByDate = new Map();
+  categoryRows.forEach((row) => {
+    const key = String(row.review_date);
+    const categories = categoriesByDate.get(key) || [];
+    categories.push({
+      subject_name: row.subject_name,
+      category_name: row.category_name,
+      item_count: Number(row.item_count || 0),
+      review_count: Number(row.review_count || 0)
+    });
+    categoriesByDate.set(key, categories);
+  });
   const days = [];
   const today = new Date();
   for (let i = 59; i >= 0; i -= 1) {
@@ -508,14 +533,31 @@ function buildDailyTrend(rows) {
     date.setDate(today.getDate() - i);
     const key = localDateKey(date);
     const row = byDate.get(key) || {};
+    const categories = categoriesByDate.get(key) || [];
     days.push({
       date: key,
       review_count: Number(row.review_count || 0),
       item_count: Number(row.item_count || 0),
-      mastered_count: Number(row.mastered_count || 0)
+      mastered_count: Number(row.mastered_count || 0),
+      category_count: categories.length,
+      categories
     });
   }
   return days;
+}
+
+function groupDaysByMonth(days) {
+  const groups = [];
+  days.forEach((day) => {
+    const monthKey = day.date.slice(0, 7);
+    let group = groups.find((item) => item.key === monthKey);
+    if (!group) {
+      group = { key: monthKey, label: `${monthKey.slice(0, 4)}年${Number(monthKey.slice(5, 7))}月`, days: [] };
+      groups.push(group);
+    }
+    group.days.push(day);
+  });
+  return groups;
 }
 
 function heatLevel(value, maxValue) {

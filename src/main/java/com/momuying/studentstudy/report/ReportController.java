@@ -151,13 +151,32 @@ public class ReportController {
                 ORDER BY review_date DESC
                 """, dailyArgs.toArray());
 
+        List<Map<String, Object>> dailyCategories = jdbcTemplate.queryForList("""
+                SELECT
+                  DATE(r.reviewed_at) AS review_date,
+                  s.name AS subject_name,
+                  c.name AS category_name,
+                  COUNT(DISTINCT r.item_id) AS item_count,
+                  COUNT(*) AS review_count
+                FROM review_records r
+                JOIN learning_items i ON i.id = r.item_id
+                JOIN subjects s ON s.id = i.subject_id
+                JOIN item_categories c ON c.id = i.category_id
+                WHERE i.status <> 'ARCHIVED'
+                  AND r.reviewed_at >= ?
+                """ + dailyChildFilter + """
+                GROUP BY DATE(r.reviewed_at), s.name, c.name
+                ORDER BY review_date DESC, item_count DESC, review_count DESC
+                """, dailyArgs.toArray());
+
         return ApiResponse.ok(Map.of(
                 "overview", overview,
                 "dueToday", dueToday == null ? 0 : dueToday,
                 "todayReview", todayReview,
                 "statusBuckets", statusBuckets,
                 "modules", modules,
-                "dailyTrend", dailyTrend
+                "dailyTrend", dailyTrend,
+                "dailyCategories", dailyCategories
         ));
     }
 
