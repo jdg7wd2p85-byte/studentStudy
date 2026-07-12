@@ -4,7 +4,6 @@ const state = {
   items: [],
   today: [],
   report: null,
-  reviews: [],
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set()
@@ -27,12 +26,17 @@ $("rulesCloseBtn").onclick = () => $("rulesModal").classList.add("hidden");
 $("rulesModal").onclick = (event) => {
   if (event.target.id === "rulesModal") $("rulesModal").classList.add("hidden");
 };
+$("historyCloseBtn").onclick = () => $("historyModal").classList.add("hidden");
+$("historyModal").onclick = (event) => {
+  if (event.target.id === "historyModal") $("historyModal").classList.add("hidden");
+};
 $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
+$("historySelectedBtn").onclick = viewSelectedHistory;
 $("categorySelect").addEventListener("change", () => {
   syncSubjectWithCategory();
   syncListFilterWithCategory();
@@ -63,7 +67,7 @@ async function api(path, options = {}) {
 async function loadAll() {
   state.catalog = await api("/api/catalog");
   renderCatalog();
-  await Promise.all([loadItems(), loadToday(), loadReport(), loadReviewRecords()]);
+  await Promise.all([loadItems(), loadToday(), loadReport()]);
 }
 
 function renderCatalog() {
@@ -204,7 +208,7 @@ async function loadItems() {
   if ($("categoryFilterSelect")?.value) params.set("categoryId", $("categoryFilterSelect").value);
   if ($("tagFilterInput")?.value) params.set("tag", $("tagFilterInput").value);
   const statuses = selectedStatuses();
-  if (statuses.length) params.set("masteryStatus", statuses.join(","));
+  if (statuses.length) params.set("reviewStatus", statuses.join(","));
   state.items = await api(`/api/items?${params}`);
   renderItems();
   updateSelectionBar();
@@ -223,11 +227,6 @@ async function loadReport() {
   updateSummary();
   renderModuleStats();
   renderReport();
-}
-
-async function loadReviewRecords() {
-  state.reviews = await api("/api/reports/reviews");
-  renderReviewHistory();
 }
 
 function renderItems() {
@@ -252,6 +251,7 @@ function renderItemCard(item) {
           <span class="badge">读${Number(item.total_review_count || 0)}次</span>
         </div>
         <div class="text-excerpt">${escapeHtml(excerpt(item.content || ""))}</div>
+        <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
         <div class="meta">${meta}</div>
       </article>
     `;
@@ -263,6 +263,7 @@ function renderItemCard(item) {
         <span class="badge">背${Number(item.total_review_count || 0)}次</span>
       </div>
       <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
+      <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
       <div class="meta">${meta}</div>
     </article>
   `;
@@ -332,7 +333,7 @@ async function submitReview(id, rating) {
   });
   state.reviewIndex += 1;
   state.revealAnswer = false;
-  await Promise.all([loadItems(), loadToday(), loadReport(), loadReviewRecords()]);
+  await Promise.all([loadItems(), loadToday(), loadReport()]);
 }
 
 async function makePaper() {
@@ -377,8 +378,34 @@ async function deleteSelectedItems() {
     body: JSON.stringify({ itemIds })
   });
   itemIds.forEach((id) => state.selected.delete(id));
-  await Promise.all([loadItems(), loadToday(), loadReport(), loadReviewRecords()]);
+  await Promise.all([loadItems(), loadToday(), loadReport()]);
   alert(`已删除 ${result.deleted ?? 0} 项`);
+}
+
+async function viewItemHistory(itemId) {
+  const item = state.items.find((row) => Number(row.id) === Number(itemId));
+  $("historyTitle").textContent = item ? `${item.title} 的背诵记录` : "背诵记录";
+  $("itemHistory").innerHTML = `<div class="empty-note">加载中...</div>`;
+  $("historyModal").classList.remove("hidden");
+  const rows = await api(`/api/reports/reviews?itemId=${itemId}`);
+  $("itemHistory").innerHTML = rows.length ? rows.map((row) => `
+    <article class="report-row">
+      <div>
+        <strong>${ratingLabel(row.rating)}</strong>
+        <span>${formatDate(row.reviewed_at)} / 下次 ${formatDate(row.next_review_at)}</span>
+      </div>
+      <span class="badge">${row.before_mastery_score} -> ${row.after_mastery_score}</span>
+    </article>
+  `).join("") : `<div class="empty-note">这个学习项还没有背诵记录</div>`;
+}
+
+function viewSelectedHistory() {
+  const itemIds = [...state.selected];
+  if (itemIds.length !== 1) {
+    alert("请只勾选一个学习项查看记录");
+    return;
+  }
+  viewItemHistory(itemIds[0]);
 }
 
 function showTab(tabId) {
@@ -407,7 +434,10 @@ function selectedStatuses() {
 function updateSelectionBar() {
   const count = state.selected.size;
   if ($("selectedCount")) {
-    $("selectedCount").textContent = `已选 ${count} 项`;
+    $("selectedCount").textContent = `当前 ${state.items.length} 项 / 已选 ${count} 项`;
+  }
+  if ($("historySelectedBtn")) {
+    $("historySelectedBtn").disabled = count !== 1;
   }
   if ($("makePaperFromListBtn")) {
     $("makePaperFromListBtn").disabled = count === 0;
@@ -436,16 +466,15 @@ function renderReport() {
   const today = state.report.todayReview || {};
   $("reportOverview").innerHTML = `
     <div><strong>${overview.total_items ?? 0}</strong><span>学习项总数</span></div>
-    <div><strong>${state.report.dueToday ?? 0}</strong><span>今日待复习</span></div>
-    <div><strong>${overview.reviewed_items ?? 0}</strong><span>已背过项目</span></div>
+    <div><strong>${overview.mastered_count ?? 0}</strong><span>已掌握项</span></div>
     <div><strong>${overview.total_reviews ?? 0}</strong><span>累计背诵次数</span></div>
-    <div><strong>${overview.weak_count ?? 0}</strong><span>薄弱项</span></div>
+    <div><strong>${overview.weak_count ?? 0}</strong><span>未掌握项</span></div>
     <div><strong>${overview.avg_mastery ?? 0}</strong><span>平均掌握分</span></div>
   `;
   $("todayReport").innerHTML = `
     <div><strong>${today.item_count ?? 0}</strong><span>今天背了多少个</span></div>
     <div><strong>${today.review_count ?? 0}</strong><span>今天背诵次数</span></div>
-    <div><strong>${today.mastered_count ?? 0}</strong><span>今天已掌握</span></div>
+    <div><strong>${today.mastered_count ?? 0}</strong><span>今天达到掌握</span></div>
     <div><strong>${today.fluent_count ?? 0}</strong><span>今天熟练</span></div>
     <div><strong>${today.ok_count ?? 0}</strong><span>今天基本会</span></div>
     <div><strong>${Number(today.forgot_count || 0) + Number(today.vague_count || 0)}</strong><span>今天需加强</span></div>
@@ -467,22 +496,6 @@ function renderReport() {
         <span class="badge">均分 ${row.avg_mastery}</span>
       </article>
     `).join("")}
-  `;
-}
-
-function renderReviewHistory() {
-  if (!$("reviewHistory")) return;
-  $("reviewHistory").innerHTML = `
-    <h3>背诵记录</h3>
-    ${state.reviews.length ? state.reviews.map((row) => `
-      <article class="report-row">
-        <div>
-          <strong>${escapeHtml(row.title)}</strong>
-          <span>${formatDate(row.reviewed_at)} / ${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)} / ${ratingLabel(row.rating)}</span>
-        </div>
-        <span class="badge">${row.before_mastery_score} -> ${row.after_mastery_score}</span>
-      </article>
-    `).join("") : `<div class="empty-note">暂无背诵记录</div>`}
   `;
 }
 

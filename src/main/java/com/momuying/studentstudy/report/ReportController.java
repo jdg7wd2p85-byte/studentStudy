@@ -34,9 +34,8 @@ public class ReportController {
         Map<String, Object> overview = jdbcTemplate.queryForMap("""
                 SELECT
                   COUNT(*) AS total_items,
-                  COALESCE(SUM(CASE WHEN i.mastery_score < 60 THEN 1 ELSE 0 END), 0) AS weak_count,
+                  COALESCE(SUM(CASE WHEN i.mastery_score < 90 THEN 1 ELSE 0 END), 0) AS weak_count,
                   COALESCE(SUM(CASE WHEN i.mastery_score >= 90 THEN 1 ELSE 0 END), 0) AS mastered_count,
-                  COALESCE(SUM(CASE WHEN i.total_review_count > 0 THEN 1 ELSE 0 END), 0) AS reviewed_items,
                   COALESCE(SUM(i.total_review_count), 0) AS total_reviews,
                   COALESCE(ROUND(AVG(i.mastery_score)), 0) AS avg_mastery
                 FROM learning_items i
@@ -80,36 +79,37 @@ public class ReportController {
                 """ + todayChildFilter, todayArgs.toArray());
 
         List<Map<String, Object>> statusBuckets = jdbcTemplate.queryForList("""
-                SELECT 'weak' AS status_key, '薄弱' AS status_name, COUNT(*) AS item_count
+                SELECT 'forgot' AS status_key, '不会' AS status_name, COUNT(*) AS item_count
                 FROM learning_items i
-                WHERE i.status <> 'ARCHIVED'
-                  AND i.mastery_score < 60
+                JOIN review_records r ON r.id = (
+                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
+                )
+                WHERE i.status <> 'ARCHIVED' AND r.rating = 0
                 """ + childFilter + """
                 UNION ALL
-                SELECT 'learning', '学习中', COUNT(*)
+                SELECT 'vague', '模糊', COUNT(*)
                 FROM learning_items i
-                WHERE i.status <> 'ARCHIVED'
-                  AND i.mastery_score >= 60
-                  AND i.mastery_score < 90
+                JOIN review_records r ON r.id = (
+                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
+                )
+                WHERE i.status <> 'ARCHIVED' AND r.rating = 1
                 """ + childFilter + """
                 UNION ALL
-                SELECT 'mastered', '已掌握', COUNT(*)
+                SELECT 'ok', '基本会', COUNT(*)
                 FROM learning_items i
-                WHERE i.status <> 'ARCHIVED'
-                  AND i.mastery_score >= 90
+                JOIN review_records r ON r.id = (
+                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
+                )
+                WHERE i.status <> 'ARCHIVED' AND r.rating = 2
                 """ + childFilter + """
                 UNION ALL
-                SELECT 'unreviewed', '未背过', COUNT(*)
+                SELECT 'fluent', '熟练', COUNT(*)
                 FROM learning_items i
-                WHERE i.status <> 'ARCHIVED'
-                  AND i.total_review_count = 0
-                """ + childFilter + """
-                UNION ALL
-                SELECT 'reviewed', '已背过', COUNT(*)
-                FROM learning_items i
-                WHERE i.status <> 'ARCHIVED'
-                  AND i.total_review_count > 0
-                """ + childFilter, repeatArgs(args, 5));
+                JOIN review_records r ON r.id = (
+                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
+                )
+                WHERE i.status <> 'ARCHIVED' AND r.rating = 3
+                """ + childFilter, repeatArgs(args, 4));
 
         List<Map<String, Object>> modules = jdbcTemplate.queryForList("""
                 SELECT
@@ -117,7 +117,7 @@ public class ReportController {
                   c.name AS category_name,
                   COUNT(*) AS item_count,
                   COALESCE(SUM(i.total_review_count), 0) AS review_count,
-                  COALESCE(SUM(CASE WHEN i.mastery_score < 60 THEN 1 ELSE 0 END), 0) AS weak_count,
+                  COALESCE(SUM(CASE WHEN i.mastery_score < 90 THEN 1 ELSE 0 END), 0) AS weak_count,
                   COALESCE(ROUND(AVG(i.mastery_score)), 0) AS avg_mastery
                 FROM learning_items i
                 JOIN item_categories c ON c.id = i.category_id
@@ -139,12 +139,20 @@ public class ReportController {
     }
 
     @GetMapping("/reviews")
-    public ApiResponse<List<Map<String, Object>>> reviews(@RequestParam(required = false) Long childId) {
+    public ApiResponse<List<Map<String, Object>>> reviews(
+            @RequestParam(required = false) Long childId,
+            @RequestParam(required = false) Long itemId
+    ) {
         List<Object> args = new ArrayList<>();
         String childFilter = "";
         if (childId != null) {
             childFilter = " AND r.child_id = ?";
             args.add(childId);
+        }
+        String itemFilter = "";
+        if (itemId != null) {
+            itemFilter = " AND r.item_id = ?";
+            args.add(itemId);
         }
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
                 SELECT
@@ -166,7 +174,7 @@ public class ReportController {
                 JOIN item_categories c ON c.id = i.category_id
                 JOIN subjects s ON s.id = i.subject_id
                 WHERE i.status <> 'ARCHIVED'
-                """ + childFilter + """
+                """ + childFilter + itemFilter + """
                 ORDER BY r.reviewed_at DESC, r.id DESC
                 LIMIT 100
                 """, args.toArray());

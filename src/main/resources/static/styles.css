@@ -152,6 +152,11 @@ button:active {
   box-shadow: 0 1px 0 rgba(63, 143, 98, 0.16);
 }
 .icon-btn { min-width: 60px; }
+.small-action {
+  margin-top: 10px;
+  min-height: 34px;
+  padding: 0 12px;
+}
 
 .panel { display: none; padding: 14px; }
 .panel.active {
@@ -320,6 +325,9 @@ textarea { resize: vertical; line-height: 1.5; }
 .selection-actions {
   display: flex;
   gap: 8px;
+}
+.selection-actions button {
+  min-width: 92px;
 }
 
 .review-card { min-height: 280px; padding: 18px; }

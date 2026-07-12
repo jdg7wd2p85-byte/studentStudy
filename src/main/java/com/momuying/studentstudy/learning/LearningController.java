@@ -114,7 +114,7 @@ public class LearningController {
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String tag,
-            @RequestParam(required = false) String masteryStatus
+            @RequestParam(required = false) String reviewStatus
     ) {
         StringBuilder sql = new StringBuilder("""
                 SELECT i.*, c.name AS category_name, s.name AS subject_name
@@ -147,23 +147,31 @@ public class LearningController {
             sql.append(" AND i.tags LIKE ?");
             args.add("%" + tag.trim() + "%");
         }
-        if (masteryStatus != null && !masteryStatus.isBlank()) {
-            List<String> statusConditions = new ArrayList<>();
-            for (String status : masteryStatus.split(",")) {
+        if (reviewStatus != null && !reviewStatus.isBlank()) {
+            List<Integer> ratings = new ArrayList<>();
+            for (String status : reviewStatus.split(",")) {
                 switch (status.trim()) {
-                    case "weak" -> statusConditions.add("i.mastery_score < 60");
-                    case "learning" -> statusConditions.add("i.mastery_score >= 60 AND i.mastery_score < 90");
-                    case "mastered" -> statusConditions.add("i.mastery_score >= 90");
-                    case "unreviewed" -> statusConditions.add("i.total_review_count = 0");
-                    case "reviewed" -> statusConditions.add("i.total_review_count > 0");
+                    case "forgot" -> ratings.add(0);
+                    case "vague" -> ratings.add(1);
+                    case "ok" -> ratings.add(2);
+                    case "fluent" -> ratings.add(3);
                     default -> {
                     }
                 }
             }
-            if (!statusConditions.isEmpty()) {
-                sql.append(" AND (");
-                sql.append(String.join(" OR ", statusConditions.stream().map(condition -> "(" + condition + ")").toList()));
+            if (!ratings.isEmpty()) {
+                sql.append("""
+                         AND (
+                           SELECT r.rating
+                           FROM review_records r
+                           WHERE r.item_id = i.id
+                           ORDER BY r.reviewed_at DESC, r.id DESC
+                           LIMIT 1
+                         ) IN (
+                        """);
+                sql.append(String.join(",", ratings.stream().map(rating -> "?").toList()));
                 sql.append(")");
+                args.addAll(ratings);
             }
         }
         sql.append(" ORDER BY i.next_review_at ASC, i.mastery_score ASC, i.id DESC LIMIT 200");

@@ -22,7 +22,7 @@
   <section class="summary">
     <div><strong id="todayCount">0</strong><span>今日待复习</span></div>
     <div><strong id="itemCount">0</strong><span>学习项</span></div>
-    <div><strong id="weakCount">0</strong><span>薄弱项</span></div>
+    <div><strong id="weakCount">0</strong><span>未掌握项</span></div>
   </section>
   <section id="moduleStats" class="module-stats"></section>
 
@@ -67,15 +67,15 @@ apple 苹果"></div>
       <button id="searchBtn">搜索</button>
     </div>
     <div id="statusFilters" class="status-filters">
-      <label><input type="checkbox" value="weak"> 薄弱</label>
-      <label><input type="checkbox" value="learning"> 学习中</label>
-      <label><input type="checkbox" value="mastered"> 已掌握</label>
-      <label><input type="checkbox" value="unreviewed"> 未背过</label>
-      <label><input type="checkbox" value="reviewed"> 已背过</label>
+      <label><input type="checkbox" value="forgot"> 不会</label>
+      <label><input type="checkbox" value="vague"> 模糊</label>
+      <label><input type="checkbox" value="ok"> 基本会</label>
+      <label><input type="checkbox" value="fluent"> 熟练</label>
     </div>
     <div class="selection-bar">
       <span id="selectedCount">已选 0 项</span>
       <div class="selection-actions">
+        <button id="historySelectedBtn">查看记录</button>
         <button id="makePaperFromListBtn" class="primary">生成练习卷</button>
         <button id="deleteSelectedBtn" class="danger">删除所选</button>
       </div>
@@ -96,7 +96,6 @@ apple 苹果"></div>
     <div id="todayReport" class="report-grid"></div>
     <div id="statusReport" class="status-report"></div>
     <div id="reportModules" class="report-list"></div>
-    <div id="reviewHistory" class="report-list"></div>
   </section>
 </main>
 
@@ -115,6 +114,16 @@ apple 苹果"></div>
       <p>掌握分达到 90 分及以上，视为已掌握。</p>
       <p>复习间隔：1 天、2 天、4 天、7 天、15 天、30 天、60 天。</p>
     </div>
+  </div>
+</div>
+
+<div id="historyModal" class="modal hidden">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3 id="historyTitle">背诵记录</h3>
+      <button id="historyCloseBtn" class="icon-btn">关闭</button>
+    </div>
+    <div id="itemHistory" class="report-list"></div>
   </div>
 </div>
 
