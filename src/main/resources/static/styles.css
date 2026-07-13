@@ -258,6 +258,16 @@ textarea { resize: vertical; line-height: 1.5; }
   margin-top: 10px;
   padding: 10px;
 }
+.text-excerpt.expanded {
+  line-height: 1.75;
+  max-height: none;
+  white-space: pre-wrap;
+}
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .text-review {
   margin-top: 14px;
 }

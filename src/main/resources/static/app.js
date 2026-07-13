@@ -6,7 +6,8 @@ const state = {
   report: null,
   reviewIndex: 0,
   revealAnswer: false,
-  selected: new Set()
+  selected: new Set(),
+  expandedTexts: new Set()
 };
 
 const $ = (id) => document.getElementById(id);
@@ -244,14 +245,19 @@ function renderItems() {
 function renderItemCard(item) {
   const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
   if (isLongTextItem(item)) {
+    const expanded = state.expandedTexts.has(Number(item.id));
+    const content = item.content || "";
     return `
       <article class="item text-preview">
         <div class="item-head">
           <label><input type="checkbox" data-id="${item.id}" ${state.selected.has(item.id) ? "checked" : ""}> ${escapeHtml(item.title)}</label>
           <span class="badge">读${Number(item.total_review_count || 0)}次</span>
         </div>
-        <div class="text-excerpt">${escapeHtml(excerpt(item.content || ""))}</div>
-        <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
+        <div class="text-excerpt ${expanded ? "expanded" : ""}">${escapeHtml(expanded ? content : excerpt(content))}</div>
+        <div class="inline-actions">
+          <button class="small-action" onclick="toggleTextExpand(${item.id})">${expanded ? "收起全文" : "展开全文"}</button>
+          <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
+        </div>
         <div class="meta">${meta}</div>
       </article>
     `;
@@ -324,6 +330,12 @@ function toggleAnswer() {
 
 function isLongTextItem(item) {
   return item.displayMode === "LONG_TEXT" || item.display_mode === "LONG_TEXT";
+}
+
+function toggleTextExpand(itemId) {
+  const id = Number(itemId);
+  state.expandedTexts.has(id) ? state.expandedTexts.delete(id) : state.expandedTexts.add(id);
+  renderItems();
 }
 
 async function submitReview(id, rating) {
