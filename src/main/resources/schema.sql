@@ -107,3 +107,15 @@ CREATE TABLE IF NOT EXISTS practice_paper_items (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_paper_items_paper (paper_id, sort_order)
 );
+
+CREATE TABLE IF NOT EXISTS dream_entries (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  child_id BIGINT NOT NULL,
+  content TEXT NOT NULL,
+  target_score INT NULL,
+  target_date DATE NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_dream_child_status (child_id, status, created_at)
+);

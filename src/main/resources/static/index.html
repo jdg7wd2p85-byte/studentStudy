@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles-20260716-1.css">
+  <link rel="stylesheet" href="/styles-20260716-2.css">
 </head>
 <body>
 <header class="app-header">
@@ -114,6 +114,10 @@ apple 苹果"></div>
       <h2>做梦计划</h2>
       <p>把孩子说过的目标和画面先存下来，后面可以接成长期愿望墙和学习目标。</p>
       <textarea id="dreamInput" rows="4" placeholder="例如：想考270分，以后买大别墅，在阳台装空调给猫。"></textarea>
+      <div class="dream-fields">
+        <label>目标分数<input id="dreamScoreInput" type="number" min="0" max="750" placeholder="270"></label>
+        <label>目标日期<input id="dreamDateInput" type="date"></label>
+      </div>
       <div class="actions">
         <button id="addDreamBtn" class="primary">记录梦想</button>
       </div>
@@ -168,6 +172,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app-20260716-1.js"></script>
+<script src="/app-20260716-2.js"></script>
 </body>
 </html>
