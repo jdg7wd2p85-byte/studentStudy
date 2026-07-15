@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles-20260716-2.css">
+  <link rel="stylesheet" href="/styles-20260716-3.css">
 </head>
 <body>
 <header class="app-header">
@@ -128,6 +128,7 @@ apple 苹果"></div>
   <section id="rocket" class="panel">
     <div class="rocket-lab">
       <h2>火箭发射实验</h2>
+      <p>任务：控制推力对抗重力，分离一级和二级，并尝试把每一级都回收。</p>
       <canvas id="rocketCanvas" width="320" height="420"></canvas>
       <div class="rocket-controls">
         <label>推力 <input id="thrustSlider" type="range" min="6" max="18" value="12"></label>
@@ -136,7 +137,7 @@ apple 苹果"></div>
       <div class="actions">
         <button id="launchRocketBtn" class="primary">发射</button>
         <button id="stageRocketBtn">分离一级</button>
-        <button id="recoverRocketBtn">回收</button>
+        <button id="recoverRocketBtn">回收一级</button>
         <button id="resetRocketBtn">重置</button>
       </div>
       <div id="rocketStatus" class="rocket-status"></div>
@@ -172,6 +173,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app-20260716-2.js"></script>
+<script src="/app-20260716-3.js"></script>
 </body>
 </html>
