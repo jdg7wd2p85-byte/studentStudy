@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>学习岛日记</title>
-  <link rel="stylesheet" href="/styles-20260713-1.css">
+  <title>七年级学习岛</title>
+  <link rel="stylesheet" href="/styles-20260716-1.css">
 </head>
 <body>
 <header class="app-header">
   <div>
-    <h1>学习岛日记</h1>
-    <p>录入、复习、出题，每天照看一点点</p>
+    <h1>七年级学习岛</h1>
+    <p>上海初中学习、复习、梦想和小游戏</p>
   </div>
   <div class="header-actions">
     <button id="rulesBtn" class="icon-btn">?</button>
@@ -27,14 +27,25 @@
   <section id="moduleStats" class="module-stats"></section>
 
   <nav class="tabs">
-    <button class="active" data-tab="input">录入</button>
+    <button class="active" data-tab="home">菜单</button>
+    <button data-tab="input">录入</button>
     <button data-tab="review">复习</button>
     <button data-tab="items">列表</button>
     <button data-tab="paper">出题</button>
     <button data-tab="report">报告</button>
+    <button data-tab="dreams">梦想</button>
+    <button data-tab="rocket">火箭</button>
   </nav>
 
-  <section id="input" class="panel active">
+  <section id="home" class="panel active">
+    <div class="home-hero">
+      <h2>今天想学哪一块？</h2>
+      <p>单词仍然保留，点击英语单词可以直达原来的单词列表，也可以访问 <code>#english-words</code>。</p>
+    </div>
+    <div id="subjectMenu" class="subject-menu"></div>
+  </section>
+
+  <section id="input" class="panel">
     <div class="form-grid">
       <label>孩子<select id="childSelect"></select></label>
       <label>科目<select id="subjectSelect"></select></label>
@@ -97,6 +108,36 @@ apple 苹果"></div>
     <div id="reviewHeatmap" class="heatmap"></div>
     <div id="dailyReviewList" class="report-list"></div>
   </section>
+
+  <section id="dreams" class="panel">
+    <div class="dream-board">
+      <h2>做梦计划</h2>
+      <p>把孩子说过的目标和画面先存下来，后面可以接成长期愿望墙和学习目标。</p>
+      <textarea id="dreamInput" rows="4" placeholder="例如：想考270分，以后买大别墅，在阳台装空调给猫。"></textarea>
+      <div class="actions">
+        <button id="addDreamBtn" class="primary">记录梦想</button>
+      </div>
+      <div id="dreamList" class="list"></div>
+    </div>
+  </section>
+
+  <section id="rocket" class="panel">
+    <div class="rocket-lab">
+      <h2>火箭发射实验</h2>
+      <canvas id="rocketCanvas" width="320" height="420"></canvas>
+      <div class="rocket-controls">
+        <label>推力 <input id="thrustSlider" type="range" min="6" max="18" value="12"></label>
+        <label>重力 <input id="gravitySlider" type="range" min="4" max="12" value="8"></label>
+      </div>
+      <div class="actions">
+        <button id="launchRocketBtn" class="primary">发射</button>
+        <button id="stageRocketBtn">分离一级</button>
+        <button id="recoverRocketBtn">回收</button>
+        <button id="resetRocketBtn">重置</button>
+      </div>
+      <div id="rocketStatus" class="rocket-status"></div>
+    </div>
+  </section>
 </main>
 
 <div id="rulesModal" class="modal hidden">
@@ -127,6 +168,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app-20260713-1.js"></script>
+<script src="/app-20260716-1.js"></script>
 </body>
 </html>

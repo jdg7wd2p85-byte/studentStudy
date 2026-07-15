@@ -19,6 +19,9 @@ public class DataInitializer implements ApplicationRunner {
         insertSubject("语文", 2);
         insertSubject("数学", 3);
         insertSubject("物理", 4);
+        insertSubject("化学", 5);
+        insertSubject("生物", 6);
+        insertSubject("地理", 7);
 
         if (count("children") == 0) {
             jdbcTemplate.update("INSERT INTO children(name, grade) VALUES (?, ?)", "孩子", "");
@@ -26,11 +29,26 @@ public class DataInitializer implements ApplicationRunner {
 
         insertCategory("WORD", "单词", "英语", "FLASHCARD", 1);
         insertCategory("SENTENCE", "句子/短语", "英语", "FLASHCARD", 2);
-        insertCategory("TEXT", "课文/古诗", "语文", "LONG_TEXT", 3);
-        insertCategory("THEOREM", "数学定理", "数学", "QA", 4);
-        insertCategory("FORMULA", "物理公式", "物理", "FORMULA", 5);
-        insertCategory("KNOWLEDGE", "知识点", "数学", "QA", 6);
-        insertCategory("WRONG_QUESTION", "错题", "数学", "EXPLANATION", 7);
+        insertCategory("EN_GRAMMAR", "语法", "英语", "QA", 3);
+        insertCategory("EN_WRITING", "作文", "英语", "LONG_TEXT", 4);
+        insertCategory("TEXT", "课文/古诗", "语文", "LONG_TEXT", 5);
+        insertCategory("CN_RECITE", "背诵", "语文", "LONG_TEXT", 6);
+        insertCategory("CN_WORD", "生词", "语文", "FLASHCARD", 7);
+        insertCategory("THEOREM", "数学定理", "数学", "QA", 8);
+        insertCategory("MATH_FORMULA", "公式", "数学", "FORMULA", 9);
+        insertCategory("KNOWLEDGE", "知识点", "数学", "QA", 10);
+        insertCategory("WRONG_QUESTION", "错题", "数学", "EXPLANATION", 11);
+        insertCategory("FORMULA", "物理公式", "物理", "FORMULA", 12);
+        insertCategory("PHYSICS_EXPERIMENT", "实验", "物理", "EXPLANATION", 13);
+        insertCategory("CHEM_EQUATION", "方程式", "化学", "FORMULA", 14);
+        insertCategory("CHEM_EXPERIMENT", "实验", "化学", "EXPLANATION", 15);
+        insertCategory("CHEM_CONCEPT", "概念", "化学", "QA", 16);
+        insertCategory("BIO_CONCEPT", "概念", "生物", "QA", 17);
+        insertCategory("BIO_DIAGRAM", "图示", "生物", "EXPLANATION", 18);
+        insertCategory("BIO_RECITE", "背诵", "生物", "LONG_TEXT", 19);
+        insertCategory("GEO_MAP", "地图", "地理", "EXPLANATION", 20);
+        insertCategory("GEO_CONCEPT", "概念", "地理", "QA", 21);
+        insertCategory("GEO_RECITE", "背诵", "地理", "LONG_TEXT", 22);
     }
 
     private void insertSubject(String name, int sortOrder) {
