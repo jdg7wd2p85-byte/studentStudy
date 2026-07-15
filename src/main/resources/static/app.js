@@ -34,6 +34,7 @@ $("historyModal").onclick = (event) => {
 $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
+$("resetFiltersBtn").onclick = resetFilters;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
@@ -213,6 +214,18 @@ async function loadItems() {
   state.items = await api(`/api/items?${params}`);
   renderItems();
   updateSelectionBar();
+}
+
+function resetFilters() {
+  $("keywordInput").value = "";
+  $("subjectFilterSelect").value = "";
+  renderCategoryFilter();
+  $("categoryFilterSelect").value = "";
+  $("tagFilterInput").value = "";
+  document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
+    input.checked = false;
+  });
+  loadItems();
 }
 
 async function loadToday() {
