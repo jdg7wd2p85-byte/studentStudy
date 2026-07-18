@@ -45,7 +45,7 @@ public class ScheduleController {
         args.add(Date.valueOf(weekEnd));
         String childFilter = "";
         if (childId != null) {
-            childFilter = " AND w.child_id = ?";
+            childFilter = " AND w.child_id = ? ";
             args.add(childId);
         }
 
