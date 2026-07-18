@@ -7,6 +7,7 @@ const state = {
   report: null,
   dailyAnalysis: null,
   weeklySchedule: null,
+  activeScheduleId: null,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set(),
@@ -68,6 +69,10 @@ $("historyCloseBtn").onclick = () => $("historyModal").classList.add("hidden");
 $("historyModal").onclick = (event) => {
   if (event.target.id === "historyModal") $("historyModal").classList.add("hidden");
 };
+$("scheduleCloseBtn").onclick = closeScheduleModal;
+$("scheduleModal").onclick = (event) => {
+  if (event.target.id === "scheduleModal") closeScheduleModal();
+};
 $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
@@ -79,6 +84,13 @@ $("historySelectedBtn").onclick = viewSelectedHistory;
 $("analysisLoadBtn").onclick = loadDailyAnalysis;
 $("scheduleLoadBtn").onclick = loadWeekSchedule;
 $("scheduleAddBtn").onclick = addScheduleItem;
+$("scheduleModalCopyBtn").onclick = () => copyScheduleItem(state.activeScheduleId);
+$("scheduleModalDoneBtn").onclick = () => {
+  const item = activeScheduleItem();
+  checkScheduleItem(state.activeScheduleId, item?.checkin_status !== "DONE");
+};
+$("scheduleModalSaveBtn").onclick = () => saveScheduleItem(state.activeScheduleId);
+$("scheduleModalDeleteBtn").onclick = () => deleteScheduleItem(state.activeScheduleId);
 $("addDreamBtn").onclick = addDream;
 $("launchRocketBtn").onclick = launchRocket;
 $("stageRocketBtn").onclick = separateStage;
@@ -761,33 +773,35 @@ function renderWeekSchedule() {
 function renderScheduleCell(item) {
   const done = item.checkin_status === "DONE";
   return `
-    <article class="schedule-cell ${done ? "done" : ""}">
-      <details class="schedule-popover">
-        <summary>
-          <strong>${escapeHtml(item.title)}</strong>
-          <span class="${done ? "schedule-status-done" : "schedule-status-pending"}">${done ? "完成" : "待"}</span>
-        </summary>
-        <div class="schedule-detail">
-          <div class="meta">${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / ${escapeHtml(item.category_name || "未分类")}</div>
-          <div class="meta">计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)}</div>
-          <div class="schedule-times">
-            <label>实际开始<input id="schedule-start-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_start_at)}"></label>
-            <label>实际结束<input id="schedule-end-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_end_at)}"></label>
-          </div>
-          <input id="schedule-note-${item.id}" class="schedule-note" value="${escapeHtml(item.checkin_note || "")}" placeholder="备注">
-          <div class="schedule-copy">
-            <select id="schedule-copy-${item.id}">${renderWeekDayOptions(item.week_day)}</select>
-            <button class="small-action" onclick="copyScheduleItem(${item.id})">复制到</button>
-          </div>
-          <div class="schedule-actions">
-            <button class="small-action primary" onclick="checkScheduleItem(${item.id}, ${done ? "false" : "true"})">${done ? "取消" : "完成"}</button>
-            <button class="small-action" onclick="saveScheduleItem(${item.id})">保存时间</button>
-            <button class="small-action danger" onclick="deleteScheduleItem(${item.id})">删除模板</button>
-          </div>
-        </div>
-      </details>
-    </article>
+    <button type="button" class="schedule-cell ${done ? "done" : ""}" onclick="openScheduleModal(${item.id})">
+      <strong>${escapeHtml(item.title)}</strong>
+      <span class="${done ? "schedule-status-done" : "schedule-status-pending"}">${done ? "完成" : "待"}</span>
+    </button>
   `;
+}
+
+function openScheduleModal(id) {
+  const item = (state.weeklySchedule?.items || []).find((row) => Number(row.id) === Number(id));
+  if (!item) return;
+  state.activeScheduleId = Number(id);
+  const done = item.checkin_status === "DONE";
+  $("scheduleModalTitle").textContent = item.title || "课程";
+  $("scheduleModalMeta").textContent = `${item.child_name || ""} / ${item.subject_name || "未分科"} / ${item.category_name || "未分类"} / ${weekDayName(Number(item.week_day || 1) - 1)} / 计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)}`;
+  $("scheduleModalStart").value = datetimeLocalValue(item.actual_start_at);
+  $("scheduleModalEnd").value = datetimeLocalValue(item.actual_end_at);
+  $("scheduleModalNote").value = item.checkin_note || "";
+  $("scheduleModalCopy").innerHTML = renderWeekDayOptions(item.week_day);
+  $("scheduleModalDoneBtn").textContent = done ? "取消" : "完成";
+  $("scheduleModal").classList.remove("hidden");
+}
+
+function closeScheduleModal() {
+  state.activeScheduleId = null;
+  $("scheduleModal").classList.add("hidden");
+}
+
+function activeScheduleItem() {
+  return (state.weeklySchedule?.items || []).find((row) => Number(row.id) === Number(state.activeScheduleId));
 }
 
 async function addScheduleItem() {
@@ -813,43 +827,51 @@ async function addScheduleItem() {
 }
 
 async function copyScheduleItem(id) {
-  const targetWeekDay = Number($(`schedule-copy-${id}`).value);
+  if (!id) return;
+  const targetWeekDay = Number($("scheduleModalCopy").value);
   await api(`/api/schedule/items/${id}/copy`, {
     method: "POST",
     body: JSON.stringify({ targetWeekDay })
   });
   await loadWeekSchedule();
+  closeScheduleModal();
 }
 
 async function checkScheduleItem(id, done) {
+  if (!id) return;
   await api(`/api/schedule/items/${id}/check`, {
     method: "POST",
     body: JSON.stringify(schedulePayload(id, done))
   });
   await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+  closeScheduleModal();
 }
 
 async function saveScheduleItem(id) {
+  if (!id) return;
   await api(`/api/schedule/items/${id}/update`, {
     method: "POST",
     body: JSON.stringify(schedulePayload(id, null))
   });
   await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+  closeScheduleModal();
 }
 
 async function deleteScheduleItem(id) {
+  if (!id) return;
   if (!confirm("确认删除这节课程安排吗？")) return;
   await api(`/api/schedule/items/${id}`, { method: "DELETE" });
   await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+  closeScheduleModal();
 }
 
 function schedulePayload(id, done) {
   const item = (state.weeklySchedule?.items || []).find((row) => Number(row.id) === Number(id));
   const payload = {
     checkDate: checkDateForWeekDay(Number(item?.week_day || 1)),
-    actualStartAt: toIsoDateTime($(`schedule-start-${id}`).value),
-    actualEndAt: toIsoDateTime($(`schedule-end-${id}`).value),
-    note: $(`schedule-note-${id}`).value
+    actualStartAt: toIsoDateTime($("scheduleModalStart").value),
+    actualEndAt: toIsoDateTime($("scheduleModalEnd").value),
+    note: $("scheduleModalNote").value
   };
   if (done !== null) payload.done = done;
   return payload;

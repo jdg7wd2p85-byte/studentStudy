@@ -703,47 +703,40 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   font-size: 12px;
 }
 .schedule-cell {
+  align-items: flex-start;
   background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 8px;
-  margin-bottom: 10px;
-  padding: 10px;
-}
-.schedule-cell.done {
-  background: linear-gradient(180deg, #ffffff, #e9f8e5);
-}
-.schedule-popover summary {
-  align-items: flex-start;
+  color: var(--brand-dark);
   cursor: pointer;
   display: flex;
   gap: 8px;
   justify-content: space-between;
-  list-style: none;
+  line-height: 1.35;
+  margin-bottom: 10px;
+  padding: 10px;
+  text-align: left;
+  width: 100%;
 }
-.schedule-popover summary::-webkit-details-marker {
-  display: none;
+.schedule-cell.done {
+  background: linear-gradient(180deg, #ffffff, #e9f8e5);
 }
-.schedule-popover summary strong {
+.schedule-cell strong {
   color: var(--brand-dark);
   line-height: 1.35;
 }
-.schedule-popover summary span {
+.schedule-cell span {
   color: var(--muted);
   font-size: 12px;
   white-space: nowrap;
 }
-.schedule-popover summary .schedule-status-pending {
+.schedule-cell .schedule-status-pending {
   color: #bf4d43;
   font-weight: 850;
 }
-.schedule-popover summary .schedule-status-done {
+.schedule-cell .schedule-status-done {
   color: #3f8f62;
   font-weight: 850;
-}
-.schedule-detail {
-  border-top: 1px dashed var(--line);
-  margin-top: 8px;
-  padding-top: 8px;
 }
 .schedule-times {
   display: grid;
@@ -779,6 +772,9 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 }
 .schedule-actions .danger {
   grid-column: span 2;
+}
+.schedule-modal-panel {
+  max-width: 560px;
 }
 .empty-note {
   background: rgba(255, 253, 244, 0.72);

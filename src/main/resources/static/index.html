@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260718-4">
+  <link rel="stylesheet" href="/styles.css?v=20260718-5">
 </head>
 <body>
 <header class="app-header">
@@ -205,6 +205,30 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260718-4"></script>
+<div id="scheduleModal" class="modal hidden">
+  <div class="modal-panel schedule-modal-panel">
+    <div class="modal-head">
+      <h3 id="scheduleModalTitle">课程</h3>
+      <button id="scheduleCloseBtn" class="icon-btn">关闭</button>
+    </div>
+    <div id="scheduleModalMeta" class="meta"></div>
+    <div class="schedule-times">
+      <label>实际开始<input id="scheduleModalStart" type="datetime-local"></label>
+      <label>实际结束<input id="scheduleModalEnd" type="datetime-local"></label>
+    </div>
+    <input id="scheduleModalNote" class="schedule-note" placeholder="备注">
+    <div class="schedule-copy">
+      <select id="scheduleModalCopy"></select>
+      <button id="scheduleModalCopyBtn" class="small-action">复制到</button>
+    </div>
+    <div class="schedule-actions">
+      <button id="scheduleModalDoneBtn" class="small-action primary">完成</button>
+      <button id="scheduleModalSaveBtn" class="small-action">保存时间</button>
+      <button id="scheduleModalDeleteBtn" class="small-action danger">删除模板</button>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js?v=20260718-5"></script>
 </body>
 </html>
