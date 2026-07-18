@@ -5,6 +5,8 @@ const state = {
   today: [],
   dreams: [],
   report: null,
+  dailyAnalysis: null,
+  weeklySchedule: null,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set(),
@@ -15,13 +17,13 @@ const state = {
     separatedStages: [],
     recoveredStages: [],
     recoveryTarget: 1,
-    y: 330,
     velocity: 0,
     altitude: 0,
     maxAltitude: 0,
     fuel: 100,
     score: 0,
-    animationId: null
+    animationId: null,
+    lastFrameTime: null
   }
 };
 
@@ -42,7 +44,9 @@ const routeMenus = {
   "#words": { subject: "英语", category: "单词" },
   "#chinese-recite": { subject: "语文", category: "背诵" },
   "#rocket": { tab: "rocket" },
-  "#dreams": { tab: "dreams" }
+  "#dreams": { tab: "dreams" },
+  "#analysis": { tab: "analysis" },
+  "#schedule": { tab: "schedule" }
 };
 
 document.querySelectorAll(".tabs button").forEach((btn) => {
@@ -72,6 +76,9 @@ $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
 $("historySelectedBtn").onclick = viewSelectedHistory;
+$("analysisLoadBtn").onclick = loadDailyAnalysis;
+$("scheduleLoadBtn").onclick = loadWeekSchedule;
+$("scheduleAddBtn").onclick = addScheduleItem;
 $("addDreamBtn").onclick = addDream;
 $("launchRocketBtn").onclick = launchRocket;
 $("stageRocketBtn").onclick = separateStage;
@@ -88,6 +95,11 @@ $("subjectFilterSelect").addEventListener("change", () => {
   loadItems();
 });
 $("categoryFilterSelect").addEventListener("change", loadItems);
+$("scheduleChildSelect").addEventListener("change", () => {
+  loadWeekSchedule();
+  loadDailyAnalysis();
+});
+$("scheduleSubjectSelect").addEventListener("change", renderScheduleCategorySelect);
 document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
   input.addEventListener("change", loadItems);
 });
@@ -108,7 +120,8 @@ async function api(path, options = {}) {
 async function loadAll() {
   state.catalog = await api("/api/catalog");
   renderCatalog();
-  await Promise.all([loadItems(), loadToday(), loadReport()]);
+  initializeDates();
+  await Promise.all([loadItems(), loadToday(), loadReport(), loadDailyAnalysis(), loadWeekSchedule()]);
   await migrateLocalDreams();
   await loadDreams();
   resetRocket();
@@ -120,9 +133,19 @@ function renderCatalog() {
   fillSelect("subjectSelect", state.catalog.subjects, "name");
   fillSelect("categorySelect", state.catalog.categories, "name");
   fillSelect("subjectFilterSelect", state.catalog.subjects, "name", "全部科目");
+  fillSelect("scheduleChildSelect", state.catalog.children, "name");
+  fillSelect("scheduleSubjectSelect", state.catalog.subjects, "name", "不限定科目");
+  renderScheduleCategorySelect();
   renderCategoryFilter();
   syncSubjectWithCategory();
   renderStudyMenu();
+}
+
+function initializeDates() {
+  const today = localDateKey(new Date());
+  if (!$("analysisDateInput").value) $("analysisDateInput").value = today;
+  if (!$("scheduleDateInput").value) $("scheduleDateInput").value = today;
+  if (!$("scheduleWeekStartInput").value) $("scheduleWeekStartInput").value = weekStartKey(new Date());
 }
 
 function renderStudyMenu() {
@@ -150,6 +173,14 @@ function renderCategoryFilter() {
     ? state.catalog.categories.filter((row) => String(row.subject_id || "") === String(subjectId))
     : state.catalog.categories;
   fillSelect("categoryFilterSelect", categories, "name", "全部类别");
+}
+
+function renderScheduleCategorySelect() {
+  const subjectId = $("scheduleSubjectSelect")?.value;
+  const categories = subjectId
+    ? state.catalog.categories.filter((row) => String(row.subject_id || "") === String(subjectId))
+    : state.catalog.categories;
+  fillSelect("scheduleCategorySelect", categories, "name", "不限定类别");
 }
 
 function syncSubjectWithCategory() {
@@ -616,6 +647,188 @@ function renderReport() {
   `;
 }
 
+async function loadDailyAnalysis() {
+  const date = $("analysisDateInput")?.value || localDateKey(new Date());
+  const childId = $("scheduleChildSelect")?.value || $("childSelect")?.value || "";
+  const params = new URLSearchParams({ date });
+  if (childId) params.set("childId", childId);
+  state.dailyAnalysis = await api(`/api/reports/daily?${params}`);
+  renderDailyAnalysis();
+}
+
+function renderDailyAnalysis() {
+  const data = state.dailyAnalysis;
+  if (!data) return;
+  const review = data.reviewSummary || {};
+  const schedule = data.scheduleSummary || {};
+  $("analysisSummary").innerHTML = `
+    <div><strong>${Number(review.item_count || 0)}</strong><span>当天背诵项目</span></div>
+    <div><strong>${Number(review.review_count || 0)}</strong><span>当天背诵次数</span></div>
+    <div><strong>${Number(review.mastered_count || 0)}</strong><span>当天掌握</span></div>
+    <div><strong>${Number(schedule.done_count || 0)} / ${Number(schedule.planned_count || 0)}</strong><span>课程打卡完成</span></div>
+  `;
+  $("analysisCategories").innerHTML = `
+    <h3>类别分布</h3>
+    ${(data.categorySummary || []).map((row, index) => `
+      <article class="report-row">
+        <div>
+          <strong>${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)}</strong>
+          <span>背 ${row.item_count} 个 / 共 ${row.review_count} 次 / 掌握 ${row.mastered_count} 个</span>
+        </div>
+        <span class="category-pill color-${index % 6}">${row.item_count}</span>
+      </article>
+    `).join("") || `<div class="empty-note">这一天还没有背诵记录</div>`}
+  `;
+  $("analysisSchedule").innerHTML = `
+    <h3>课程完成</h3>
+    ${(data.scheduleItems || []).map(renderAnalysisScheduleItem).join("") || `<div class="empty-note">这一天还没有安排课程</div>`}
+  `;
+  $("analysisReviews").innerHTML = `
+    <h3>背诵明细</h3>
+    ${(data.reviews || []).map((row) => `
+      <article class="report-row">
+        <div>
+          <strong>${escapeHtml(row.title)}</strong>
+          <span>${escapeHtml(row.subject_name)} / ${escapeHtml(row.category_name)} / ${formatDate(row.reviewed_at)}</span>
+        </div>
+        <span class="badge">${ratingLabel(row.rating)} ${row.before_mastery_score} -> ${row.after_mastery_score}</span>
+      </article>
+    `).join("") || `<div class="empty-note">这一天还没有背诵明细</div>`}
+  `;
+}
+
+function renderAnalysisScheduleItem(item) {
+  const status = item.status === "DONE" ? "已打卡" : "未完成";
+  return `
+    <article class="report-row">
+      <div>
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / 计划 ${formatTime(item.planned_start_time)}-${formatTime(item.planned_end_time)}</span>
+        <span>实际 ${formatDate(item.actual_start_at) || "未填"} - ${formatDate(item.actual_end_at) || "未填"}</span>
+      </div>
+      <span class="badge">${status}</span>
+    </article>
+  `;
+}
+
+async function loadWeekSchedule() {
+  const weekStart = $("scheduleWeekStartInput")?.value || weekStartKey(new Date());
+  const childId = $("scheduleChildSelect")?.value || "";
+  const params = new URLSearchParams({ weekStart });
+  if (childId) params.set("childId", childId);
+  state.weeklySchedule = await api(`/api/schedule/week?${params}`);
+  renderWeekSchedule();
+}
+
+function renderWeekSchedule() {
+  const data = state.weeklySchedule || { items: [], summary: {} };
+  const summary = data.summary || {};
+  $("scheduleSummary").innerHTML = `
+    <div><strong>${Number(summary.planned_count || 0)}</strong><span>本周计划</span></div>
+    <div><strong>${Number(summary.done_count || 0)}</strong><span>已打卡</span></div>
+    <div><strong>${Number(summary.pending_count || 0)}</strong><span>未完成</span></div>
+    <div><strong>${completionRate(summary)}%</strong><span>完成率</span></div>
+  `;
+  const weekStart = parseLocalDate($("scheduleWeekStartInput").value || weekStartKey(new Date()));
+  const itemsByDate = new Map();
+  (data.items || []).forEach((item) => {
+    const key = String(item.schedule_date);
+    const rows = itemsByDate.get(key) || [];
+    rows.push(item);
+    itemsByDate.set(key, rows);
+  });
+  $("weeklySchedule").innerHTML = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    const key = localDateKey(date);
+    const rows = itemsByDate.get(key) || [];
+    return `
+      <section class="schedule-day">
+        <h3>${weekDayName(index)}<span>${key.slice(5)}</span></h3>
+        ${rows.map(renderScheduleCell).join("") || `<div class="empty-note">未安排</div>`}
+      </section>
+    `;
+  }).join("");
+}
+
+function renderScheduleCell(item) {
+  const done = item.status === "DONE";
+  return `
+    <article class="schedule-cell ${done ? "done" : ""}">
+      <div class="schedule-cell-head">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span class="badge">${done ? "已打卡" : "待完成"}</span>
+      </div>
+      <div class="meta">${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / ${escapeHtml(item.category_name || "未分类")}</div>
+      <div class="meta">计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)}</div>
+      <div class="schedule-times">
+        <label>实际开始<input id="schedule-start-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_start_at)}"></label>
+        <label>实际结束<input id="schedule-end-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_end_at)}"></label>
+      </div>
+      <input id="schedule-note-${item.id}" class="schedule-note" value="${escapeHtml(item.note || "")}" placeholder="备注">
+      <div class="schedule-actions">
+        <button class="small-action primary" onclick="checkScheduleItem(${item.id}, ${done ? "false" : "true"})">${done ? "取消打卡" : "打卡"}</button>
+        <button class="small-action" onclick="saveScheduleItem(${item.id})">保存时间</button>
+        <button class="small-action danger" onclick="deleteScheduleItem(${item.id})">删除</button>
+      </div>
+    </article>
+  `;
+}
+
+async function addScheduleItem() {
+  const title = $("scheduleTitleInput").value.trim();
+  if (!title) {
+    alert("请填写课程内容");
+    return;
+  }
+  await api("/api/schedule/items", {
+    method: "POST",
+    body: JSON.stringify({
+      childId: Number($("scheduleChildSelect").value || $("childSelect").value),
+      scheduleDate: $("scheduleDateInput").value,
+      subjectId: $("scheduleSubjectSelect").value ? Number($("scheduleSubjectSelect").value) : null,
+      categoryId: $("scheduleCategorySelect").value ? Number($("scheduleCategorySelect").value) : null,
+      title,
+      plannedStartTime: $("scheduleStartTimeInput").value || null,
+      plannedEndTime: $("scheduleEndTimeInput").value || null
+    })
+  });
+  $("scheduleTitleInput").value = "";
+  await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+}
+
+async function checkScheduleItem(id, done) {
+  await api(`/api/schedule/items/${id}/check`, {
+    method: "POST",
+    body: JSON.stringify(schedulePayload(id, done))
+  });
+  await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+}
+
+async function saveScheduleItem(id) {
+  await api(`/api/schedule/items/${id}/update`, {
+    method: "POST",
+    body: JSON.stringify(schedulePayload(id, null))
+  });
+  await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+}
+
+async function deleteScheduleItem(id) {
+  if (!confirm("确认删除这节课程安排吗？")) return;
+  await api(`/api/schedule/items/${id}`, { method: "DELETE" });
+  await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+}
+
+function schedulePayload(id, done) {
+  const payload = {
+    actualStartAt: toIsoDateTime($(`schedule-start-${id}`).value),
+    actualEndAt: toIsoDateTime($(`schedule-end-${id}`).value),
+    note: $(`schedule-note-${id}`).value
+  };
+  if (done !== null) payload.done = done;
+  return payload;
+}
+
 async function addDream() {
   const text = $("dreamInput").value.trim();
   if (!text) return;
@@ -710,7 +923,7 @@ function separateStage() {
     state.rocket.separatedStages.push(separated);
   }
   state.rocket.stage += 1;
-  state.rocket.score += separated === 1 ? 80 : 120;
+  updateRocketScore();
   updateRocketButtons();
   $("rocketStatus").textContent = `${separated}级已分离，剩余火箭变轻，继续观察高度和燃料。`;
   drawRocket();
@@ -729,7 +942,7 @@ function recoverRocket() {
     return;
   }
   state.rocket.recoveredStages.push(target);
-  state.rocket.score += target === 1 ? 160 : 220;
+  updateRocketScore();
   state.rocket.recoveryTarget = Math.min(2, target + 1);
   updateRocketButtons();
   $("rocketStatus").textContent = `${target}级回收成功：降落伞打开，软着陆完成。`;
@@ -744,13 +957,13 @@ function resetRocket() {
     separatedStages: [],
     recoveredStages: [],
     recoveryTarget: 1,
-    y: 330,
     velocity: 0,
     altitude: 0,
     maxAltitude: 0,
     fuel: 100,
     score: 0,
-    animationId: null
+    animationId: null,
+    lastFrameTime: null
   };
   updateRocketButtons();
   $("rocketStatus").textContent = "任务：发射、分离一级、回收一级，再分离二级并回收。推力大于重力时火箭上升。";
@@ -759,29 +972,30 @@ function resetRocket() {
 
 function drawRocket() {
   if (state.rocket.animationId) cancelAnimationFrame(state.rocket.animationId);
-  const step = () => {
+  state.rocket.lastFrameTime = null;
+  const step = (timestamp) => {
+    if (state.rocket.lastFrameTime === null) state.rocket.lastFrameTime = timestamp;
+    const dt = Math.min(0.05, Math.max(0.001, (timestamp - state.rocket.lastFrameTime) / 1000));
+    state.rocket.lastFrameTime = timestamp;
     const thrust = Number($("thrustSlider").value);
     const gravity = Number($("gravitySlider").value);
     const massBonus = [1, 1.25, 1.52][Math.min(2, state.rocket.stage - 1)];
-    const fuelRatio = Math.max(0.25, state.rocket.fuel / 100);
-    const acceleration = ((thrust * massBonus * fuelRatio) - gravity) * 0.018;
     if (state.rocket.running) {
-      state.rocket.fuel = Math.max(0, state.rocket.fuel - thrust * 0.018);
-      state.rocket.velocity -= acceleration;
-      state.rocket.velocity *= 0.985;
-      state.rocket.y = Math.max(28, Math.min(340, state.rocket.y + state.rocket.velocity));
-      state.rocket.altitude = Math.max(0, Math.round((340 - state.rocket.y) * 18));
+      const powered = state.rocket.fuel > 0;
+      const atmosphere = Math.exp(-state.rocket.altitude / 70000);
+      const engineAcceleration = powered ? (thrust * massBonus - gravity) * 14 : -gravity * 10;
+      const drag = state.rocket.velocity * 0.018 * atmosphere;
+      if (powered) state.rocket.fuel = Math.max(0, state.rocket.fuel - thrust * 0.13 * dt);
+      state.rocket.velocity += (engineAcceleration - drag) * dt;
+      state.rocket.altitude = Math.max(0, state.rocket.altitude + state.rocket.velocity * dt);
       state.rocket.maxAltitude = Math.max(state.rocket.maxAltitude, state.rocket.altitude);
-      state.rocket.score = Math.max(state.rocket.score, Math.round(state.rocket.maxAltitude / 8));
-      if (state.rocket.fuel <= 0 && state.rocket.velocity > 0) {
-        state.rocket.velocity += gravity * 0.01;
-      }
-      if (state.rocket.y >= 339 && state.rocket.fuel <= 0) {
+      updateRocketScore();
+      if (state.rocket.altitude <= 0 && state.rocket.fuel <= 0 && state.rocket.velocity < 0) {
         state.rocket.running = false;
         state.rocket.velocity = 0;
         $("rocketStatus").textContent = rocketSummary("燃料耗尽，飞行结束");
       } else {
-        $("rocketStatus").textContent = rocketSummary(`${state.rocket.stage > 2 ? "载荷入轨段" : `${state.rocket.stage}级飞行`}`);
+        $("rocketStatus").textContent = rocketSummary(`${flightZone()} · ${state.rocket.stage > 2 ? "载荷入轨段" : `${state.rocket.stage}级飞行`}`);
       }
     }
     drawRocketFrame();
@@ -801,7 +1015,25 @@ function updateRocketButtons() {
 }
 
 function rocketSummary(prefix) {
-  return `${prefix} / 高度 ${state.rocket.altitude} m / 最高 ${state.rocket.maxAltitude} m / 燃料 ${Math.round(state.rocket.fuel)}% / 已回收 ${state.rocket.recoveredStages.length} 层 / 得分 ${state.rocket.score}`;
+  return `${prefix} / 高度 ${formatAltitude(state.rocket.altitude)} / 最高 ${formatAltitude(state.rocket.maxAltitude)} / 速度 ${Math.round(state.rocket.velocity)} m/s / 燃料 ${Math.round(state.rocket.fuel)}% / 已回收 ${state.rocket.recoveredStages.length} 层 / 得分 ${state.rocket.score}`;
+}
+
+function updateRocketScore() {
+  const separationBonus = state.rocket.separatedStages.reduce((sum, stage) => sum + (stage === 1 ? 80 : 120), 0);
+  const recoveryBonus = state.rocket.recoveredStages.reduce((sum, stage) => sum + (stage === 1 ? 160 : 220), 0);
+  state.rocket.score = Math.floor(state.rocket.maxAltitude / 100) + separationBonus + recoveryBonus;
+}
+
+function formatAltitude(meters) {
+  return meters >= 10000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
+}
+
+function flightZone() {
+  const altitude = state.rocket.altitude;
+  if (altitude >= 100000) return "越过卡门线，进入太空";
+  if (altitude >= 50000) return "中间层";
+  if (altitude >= 12000) return "平流层";
+  return "对流层";
 }
 
 function drawRocketFrame() {
@@ -809,20 +1041,9 @@ function drawRocketFrame() {
   const ctx = canvas.getContext("2d");
   const width = canvas.width;
   const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = "#e3f7ff";
-  ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = "#dff2de";
-  ctx.fillRect(0, height - 48, width, 48);
-  ctx.strokeStyle = "rgba(47, 113, 76, 0.22)";
-  for (let y = 50; y < height - 50; y += 50) {
-    ctx.beginPath();
-    ctx.moveTo(18, y);
-    ctx.lineTo(width - 18, y);
-    ctx.stroke();
-  }
+  drawSpaceBackground(ctx, width, height);
   const x = width / 2;
-  const y = state.rocket.y;
+  const y = Math.max(118, 330 - Math.min(212, state.rocket.altitude / 35));
   ctx.fillStyle = state.rocket.stage === 1 ? "#3f8f62" : state.rocket.stage === 2 ? "#3d8aa8" : "#7a6bb4";
   ctx.beginPath();
   ctx.moveTo(x, y - 34);
@@ -845,10 +1066,76 @@ function drawRocketFrame() {
     ctx.fill();
   }
   drawRecoveredStages(ctx, width, height);
-  ctx.fillStyle = "#28493f";
+  ctx.fillStyle = state.rocket.altitude > 30000 ? "#ffffff" : "#28493f";
   ctx.font = "12px sans-serif";
   ctx.fillText(`燃料 ${Math.round(state.rocket.fuel)}%`, 14, 22);
   ctx.fillText(`得分 ${state.rocket.score}`, width - 78, 22);
+  ctx.fillText(formatAltitude(state.rocket.altitude), 14, 40);
+}
+
+function drawSpaceBackground(ctx, width, height) {
+  const altitude = state.rocket.altitude;
+  const space = Math.min(1, Math.max(0, (altitude - 10000) / 90000));
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, mixColor([65, 155, 215], [2, 6, 24], space));
+  gradient.addColorStop(1, mixColor([210, 241, 255], [16, 32, 78], space));
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  if (space > 0.04) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, space * 1.7);
+    ctx.fillStyle = "#ffffff";
+    for (let i = 0; i < 42; i += 1) {
+      const x = (i * 73 + 19) % width;
+      const y = (i * 47 + altitude / (700 + (i % 5) * 130)) % (height - 70);
+      const radius = i % 8 === 0 ? 1.5 : 0.8;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  const cloudAlpha = Math.max(0, 1 - altitude / 18000);
+  if (cloudAlpha > 0) {
+    ctx.save();
+    ctx.globalAlpha = cloudAlpha * 0.82;
+    ctx.fillStyle = "#ffffff";
+    for (let i = 0; i < 4; i += 1) {
+      const x = (45 + i * 96 - altitude / (120 + i * 18)) % (width + 90) - 45;
+      const y = 105 + i * 68;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 38, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  const earthHeight = Math.max(48, 115 - altitude / 1700);
+  ctx.fillStyle = altitude > 22000 ? "#2377bd" : "#65a96f";
+  ctx.beginPath();
+  ctx.ellipse(width / 2, height + earthHeight * 0.55, width * 0.78, earthHeight, 0, Math.PI, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(118, 211, 255, ${0.35 + space * 0.55})`;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  if (altitude > 45000) {
+    ctx.fillStyle = "rgba(244, 241, 215, 0.9)";
+    ctx.beginPath();
+    ctx.arc(width - 48, 72, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = space > 0.45 ? "rgba(255,255,255,0.78)" : "rgba(40,73,63,0.62)";
+  ctx.font = "11px sans-serif";
+  ctx.fillText(flightZone(), 14, height - 16);
+}
+
+function mixColor(from, to, progress) {
+  const values = from.map((value, index) => Math.round(value + (to[index] - value) * progress));
+  return `rgb(${values[0]}, ${values[1]}, ${values[2]})`;
 }
 
 function drawRecoveredStages(ctx, width, height) {
@@ -937,6 +1224,28 @@ function localDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function parseLocalDate(value) {
+  const [year, month, day] = String(value).split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function weekStartKey(date) {
+  const value = new Date(date);
+  const day = value.getDay() || 7;
+  value.setDate(value.getDate() - day + 1);
+  return localDateKey(value);
+}
+
+function weekDayName(index) {
+  return ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][index] || "";
+}
+
+function completionRate(summary) {
+  const total = Number(summary.planned_count || 0);
+  if (!total) return 0;
+  return Math.round((Number(summary.done_count || 0) / total) * 100);
+}
+
 function ratingLabel(rating) {
   return ["不会", "模糊", "基本会", "熟练"][Number(rating)] || "未知";
 }
@@ -944,6 +1253,20 @@ function ratingLabel(rating) {
 function formatDate(value) {
   if (!value) return "";
   return String(value).replace("T", " ").slice(0, 16);
+}
+
+function formatTime(value) {
+  if (!value) return "未填";
+  return String(value).slice(0, 5);
+}
+
+function datetimeLocalValue(value) {
+  if (!value) return "";
+  return String(value).replace(" ", "T").slice(0, 16);
+}
+
+function toIsoDateTime(value) {
+  return value ? `${value}:00` : null;
 }
 
 function excerpt(value, max = 180) {

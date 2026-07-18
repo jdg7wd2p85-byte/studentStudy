@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles-20260716-3.css">
+  <link rel="stylesheet" href="/styles.css?v=20260718-1">
 </head>
 <body>
 <header class="app-header">
@@ -33,6 +33,8 @@
     <button data-tab="items">列表</button>
     <button data-tab="paper">出题</button>
     <button data-tab="report">报告</button>
+    <button data-tab="analysis">每日分析</button>
+    <button data-tab="schedule">课程表</button>
     <button data-tab="dreams">梦想</button>
     <button data-tab="rocket">火箭</button>
   </nav>
@@ -109,6 +111,36 @@ apple 苹果"></div>
     <div id="dailyReviewList" class="report-list"></div>
   </section>
 
+  <section id="analysis" class="panel">
+    <div class="analysis-toolbar">
+      <label>日期<input id="analysisDateInput" type="date"></label>
+      <button id="analysisLoadBtn" class="primary">查看</button>
+    </div>
+    <div id="analysisSummary" class="report-grid"></div>
+    <div id="analysisCategories" class="report-list"></div>
+    <div id="analysisSchedule" class="report-list"></div>
+    <div id="analysisReviews" class="report-list"></div>
+  </section>
+
+  <section id="schedule" class="panel">
+    <div class="schedule-toolbar">
+      <label>孩子<select id="scheduleChildSelect"></select></label>
+      <label>周开始<input id="scheduleWeekStartInput" type="date"></label>
+      <button id="scheduleLoadBtn" class="primary">查看本周</button>
+    </div>
+    <div class="schedule-form">
+      <label>日期<input id="scheduleDateInput" type="date"></label>
+      <label>科目<select id="scheduleSubjectSelect"></select></label>
+      <label>类别<select id="scheduleCategorySelect"></select></label>
+      <label class="wide">课程内容<input id="scheduleTitleInput" placeholder="例如 英语单词 Unit 3 / 数学错题整理"></label>
+      <label>计划开始<input id="scheduleStartTimeInput" type="time"></label>
+      <label>计划结束<input id="scheduleEndTimeInput" type="time"></label>
+      <button id="scheduleAddBtn" class="primary">添加课程</button>
+    </div>
+    <div id="scheduleSummary" class="report-grid"></div>
+    <div id="weeklySchedule" class="schedule-board"></div>
+  </section>
+
   <section id="dreams" class="panel">
     <div class="dream-board">
       <h2>做梦计划</h2>
@@ -128,7 +160,7 @@ apple 苹果"></div>
   <section id="rocket" class="panel">
     <div class="rocket-lab">
       <h2>火箭发射实验</h2>
-      <p>任务：控制推力对抗重力，分离一级和二级，并尝试把每一级都回收。</p>
+      <p>任务：控制推力穿过云层、大气层和卡门线，分离一级和二级，并尝试把每一级都回收。</p>
       <canvas id="rocketCanvas" width="320" height="420"></canvas>
       <div class="rocket-controls">
         <label>推力 <input id="thrustSlider" type="range" min="6" max="18" value="12"></label>
@@ -173,6 +205,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app-20260716-3.js"></script>
+<script src="/app.js?v=20260718-1"></script>
 </body>
 </html>

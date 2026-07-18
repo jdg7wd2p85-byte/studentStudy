@@ -119,3 +119,22 @@ CREATE TABLE IF NOT EXISTS dream_entries (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_dream_child_status (child_id, status, created_at)
 );
+
+CREATE TABLE IF NOT EXISTS weekly_schedule_items (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  child_id BIGINT NOT NULL,
+  schedule_date DATE NOT NULL,
+  subject_id BIGINT NULL,
+  category_id BIGINT NULL,
+  title VARCHAR(255) NOT NULL,
+  planned_start_time TIME NULL,
+  planned_end_time TIME NULL,
+  actual_start_at DATETIME NULL,
+  actual_end_at DATETIME NULL,
+  note VARCHAR(500) NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_schedule_child_date (child_id, schedule_date, status),
+  KEY idx_schedule_date_status (schedule_date, status)
+);
