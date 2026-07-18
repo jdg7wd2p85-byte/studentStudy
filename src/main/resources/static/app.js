@@ -135,6 +135,7 @@ function renderCatalog() {
   fillSelect("subjectFilterSelect", state.catalog.subjects, "name", "全部科目");
   fillSelect("scheduleChildSelect", state.catalog.children, "name");
   fillSelect("scheduleSubjectSelect", state.catalog.subjects, "name", "不限定科目");
+  $("scheduleWeekDaySelect").innerHTML = renderWeekDayOptions($("scheduleWeekDaySelect").value);
   renderScheduleCategorySelect();
   renderCategoryFilter();
   syncSubjectWithCategory();
@@ -144,8 +145,8 @@ function renderCatalog() {
 function initializeDates() {
   const today = localDateKey(new Date());
   if (!$("analysisDateInput").value) $("analysisDateInput").value = today;
-  if (!$("scheduleDateInput").value) $("scheduleDateInput").value = today;
   if (!$("scheduleWeekStartInput").value) $("scheduleWeekStartInput").value = weekStartKey(new Date());
+  if (!$("scheduleWeekDaySelect").value) $("scheduleWeekDaySelect").value = String(new Date().getDay() || 7);
 }
 
 function renderStudyMenu() {
@@ -181,6 +182,14 @@ function renderScheduleCategorySelect() {
     ? state.catalog.categories.filter((row) => String(row.subject_id || "") === String(subjectId))
     : state.catalog.categories;
   fillSelect("scheduleCategorySelect", categories, "name", "不限定类别");
+}
+
+function renderWeekDayOptions(selected = "") {
+  const options = weekDayLabels().map((label, index) => {
+    const value = String(index + 1);
+    return `<option value="${value}" ${String(selected) === value ? "selected" : ""}>${label}</option>`;
+  });
+  return options.join("");
 }
 
 function syncSubjectWithCategory() {
@@ -699,7 +708,7 @@ function renderDailyAnalysis() {
 }
 
 function renderAnalysisScheduleItem(item) {
-  const status = item.status === "DONE" ? "已打卡" : "未完成";
+  const status = item.checkin_status === "DONE" ? "已打卡" : "未完成";
   return `
     <article class="report-row">
       <div>
@@ -730,22 +739,19 @@ function renderWeekSchedule() {
     <div><strong>${Number(summary.pending_count || 0)}</strong><span>未完成</span></div>
     <div><strong>${completionRate(summary)}%</strong><span>完成率</span></div>
   `;
-  const weekStart = parseLocalDate($("scheduleWeekStartInput").value || weekStartKey(new Date()));
-  const itemsByDate = new Map();
+  const itemsByWeekDay = new Map();
   (data.items || []).forEach((item) => {
-    const key = String(item.schedule_date);
-    const rows = itemsByDate.get(key) || [];
+    const key = String(item.week_day || 1);
+    const rows = itemsByWeekDay.get(key) || [];
     rows.push(item);
-    itemsByDate.set(key, rows);
+    itemsByWeekDay.set(key, rows);
   });
   $("weeklySchedule").innerHTML = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + index);
-    const key = localDateKey(date);
-    const rows = itemsByDate.get(key) || [];
+    const weekDay = index + 1;
+    const rows = itemsByWeekDay.get(String(weekDay)) || [];
     return `
       <section class="schedule-day">
-        <h3>${weekDayName(index)}<span>${key.slice(5)}</span></h3>
+        <h3>${weekDayName(index)}<span>${checkDateForWeekDay(weekDay).slice(5)}</span></h3>
         ${rows.map(renderScheduleCell).join("") || `<div class="empty-note">未安排</div>`}
       </section>
     `;
@@ -753,25 +759,34 @@ function renderWeekSchedule() {
 }
 
 function renderScheduleCell(item) {
-  const done = item.status === "DONE";
+  const done = item.checkin_status === "DONE";
+  const checkDate = checkDateForWeekDay(Number(item.week_day || 1));
   return `
     <article class="schedule-cell ${done ? "done" : ""}">
-      <div class="schedule-cell-head">
-        <strong>${escapeHtml(item.title)}</strong>
-        <span class="badge">${done ? "已打卡" : "待完成"}</span>
-      </div>
-      <div class="meta">${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / ${escapeHtml(item.category_name || "未分类")}</div>
-      <div class="meta">计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)}</div>
-      <div class="schedule-times">
-        <label>实际开始<input id="schedule-start-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_start_at)}"></label>
-        <label>实际结束<input id="schedule-end-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_end_at)}"></label>
-      </div>
-      <input id="schedule-note-${item.id}" class="schedule-note" value="${escapeHtml(item.note || "")}" placeholder="备注">
-      <div class="schedule-actions">
-        <button class="small-action primary" onclick="checkScheduleItem(${item.id}, ${done ? "false" : "true"})">${done ? "取消打卡" : "打卡"}</button>
-        <button class="small-action" onclick="saveScheduleItem(${item.id})">保存时间</button>
-        <button class="small-action danger" onclick="deleteScheduleItem(${item.id})">删除</button>
-      </div>
+      <details class="schedule-popover">
+        <summary>
+          <strong>${escapeHtml(item.title)}</strong>
+          <span>${done ? "已打卡" : "待打卡"}</span>
+        </summary>
+        <div class="schedule-detail">
+          <div class="meta">${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / ${escapeHtml(item.category_name || "未分类")}</div>
+          <div class="meta">计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)} / 打卡日 ${checkDate}</div>
+          <div class="schedule-times">
+            <label>实际开始<input id="schedule-start-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_start_at)}"></label>
+            <label>实际结束<input id="schedule-end-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_end_at)}"></label>
+          </div>
+          <input id="schedule-note-${item.id}" class="schedule-note" value="${escapeHtml(item.checkin_note || "")}" placeholder="打卡备注">
+          <div class="schedule-copy">
+            <select id="schedule-copy-${item.id}">${renderWeekDayOptions(item.week_day)}</select>
+            <button class="small-action" onclick="copyScheduleItem(${item.id})">复制到</button>
+          </div>
+          <div class="schedule-actions">
+            <button class="small-action primary" onclick="checkScheduleItem(${item.id}, ${done ? "false" : "true"})">${done ? "取消打卡" : "打卡"}</button>
+            <button class="small-action" onclick="saveScheduleItem(${item.id})">保存时间</button>
+            <button class="small-action danger" onclick="deleteScheduleItem(${item.id})">删除模板</button>
+          </div>
+        </div>
+      </details>
     </article>
   `;
 }
@@ -786,7 +801,7 @@ async function addScheduleItem() {
     method: "POST",
     body: JSON.stringify({
       childId: Number($("scheduleChildSelect").value || $("childSelect").value),
-      scheduleDate: $("scheduleDateInput").value,
+      weekDay: Number($("scheduleWeekDaySelect").value),
       subjectId: $("scheduleSubjectSelect").value ? Number($("scheduleSubjectSelect").value) : null,
       categoryId: $("scheduleCategorySelect").value ? Number($("scheduleCategorySelect").value) : null,
       title,
@@ -796,6 +811,15 @@ async function addScheduleItem() {
   });
   $("scheduleTitleInput").value = "";
   await Promise.all([loadWeekSchedule(), loadDailyAnalysis()]);
+}
+
+async function copyScheduleItem(id) {
+  const targetWeekDay = Number($(`schedule-copy-${id}`).value);
+  await api(`/api/schedule/items/${id}/copy`, {
+    method: "POST",
+    body: JSON.stringify({ targetWeekDay })
+  });
+  await loadWeekSchedule();
 }
 
 async function checkScheduleItem(id, done) {
@@ -821,7 +845,9 @@ async function deleteScheduleItem(id) {
 }
 
 function schedulePayload(id, done) {
+  const item = (state.weeklySchedule?.items || []).find((row) => Number(row.id) === Number(id));
   const payload = {
+    checkDate: checkDateForWeekDay(Number(item?.week_day || 1)),
     actualStartAt: toIsoDateTime($(`schedule-start-${id}`).value),
     actualEndAt: toIsoDateTime($(`schedule-end-${id}`).value),
     note: $(`schedule-note-${id}`).value
@@ -1239,7 +1265,17 @@ function weekStartKey(date) {
 }
 
 function weekDayName(index) {
-  return ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][index] || "";
+  return weekDayLabels()[index] || "";
+}
+
+function weekDayLabels() {
+  return ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+}
+
+function checkDateForWeekDay(weekDay) {
+  const start = parseLocalDate($("scheduleWeekStartInput").value || weekStartKey(new Date()));
+  start.setDate(start.getDate() + Number(weekDay || 1) - 1);
+  return localDateKey(start);
 }
 
 function completionRate(summary) {

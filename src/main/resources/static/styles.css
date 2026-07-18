@@ -712,15 +712,30 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 .schedule-cell.done {
   background: linear-gradient(180deg, #ffffff, #e9f8e5);
 }
-.schedule-cell-head {
+.schedule-popover summary {
   align-items: flex-start;
+  cursor: pointer;
   display: flex;
   gap: 8px;
   justify-content: space-between;
+  list-style: none;
 }
-.schedule-cell-head strong {
+.schedule-popover summary::-webkit-details-marker {
+  display: none;
+}
+.schedule-popover summary strong {
   color: var(--brand-dark);
   line-height: 1.35;
+}
+.schedule-popover summary span {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.schedule-detail {
+  border-top: 1px dashed var(--line);
+  margin-top: 8px;
+  padding-top: 8px;
 }
 .schedule-times {
   display: grid;
@@ -740,6 +755,12 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   width: 100%;
 }
 .schedule-note {
+  margin-top: 8px;
+}
+.schedule-copy {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 1fr auto;
   margin-top: 8px;
 }
 .schedule-actions {

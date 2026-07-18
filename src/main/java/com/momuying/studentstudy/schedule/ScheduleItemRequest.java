@@ -7,6 +7,7 @@ import java.time.LocalTime;
 public record ScheduleItemRequest(
         Long childId,
         LocalDate scheduleDate,
+        Integer weekDay,
         Long subjectId,
         Long categoryId,
         String title,
@@ -14,6 +15,7 @@ public record ScheduleItemRequest(
         LocalTime plannedEndTime,
         LocalDateTime actualStartAt,
         LocalDateTime actualEndAt,
-        String note
+        String note,
+        Integer sortOrder
 ) {
 }

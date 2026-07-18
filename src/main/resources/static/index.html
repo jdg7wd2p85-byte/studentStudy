@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260718-1">
+  <link rel="stylesheet" href="/styles.css?v=20260718-2">
 </head>
 <body>
 <header class="app-header">
@@ -125,17 +125,17 @@ apple 苹果"></div>
   <section id="schedule" class="panel">
     <div class="schedule-toolbar">
       <label>孩子<select id="scheduleChildSelect"></select></label>
-      <label>周开始<input id="scheduleWeekStartInput" type="date"></label>
-      <button id="scheduleLoadBtn" class="primary">查看本周</button>
+      <label>打卡周<input id="scheduleWeekStartInput" type="date"></label>
+      <button id="scheduleLoadBtn" class="primary">查看打卡</button>
     </div>
     <div class="schedule-form">
-      <label>日期<input id="scheduleDateInput" type="date"></label>
+      <label>周几<select id="scheduleWeekDaySelect"></select></label>
       <label>科目<select id="scheduleSubjectSelect"></select></label>
       <label>类别<select id="scheduleCategorySelect"></select></label>
-      <label class="wide">课程内容<input id="scheduleTitleInput" placeholder="例如 英语单词 Unit 3 / 数学错题整理"></label>
+      <label class="wide">标题<input id="scheduleTitleInput" placeholder="例如 英语单词 Unit 3 / 数学错题整理"></label>
       <label>计划开始<input id="scheduleStartTimeInput" type="time"></label>
       <label>计划结束<input id="scheduleEndTimeInput" type="time"></label>
-      <button id="scheduleAddBtn" class="primary">添加课程</button>
+      <button id="scheduleAddBtn" class="primary">添加到周课表</button>
     </div>
     <div id="scheduleSummary" class="report-grid"></div>
     <div id="weeklySchedule" class="schedule-board"></div>
@@ -205,6 +205,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260718-1"></script>
+<script src="/app.js?v=20260718-2"></script>
 </body>
 </html>

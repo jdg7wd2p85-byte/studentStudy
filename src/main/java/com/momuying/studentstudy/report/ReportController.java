@@ -259,6 +259,7 @@ public class ReportController {
 
         List<Object> scheduleArgs = new ArrayList<>();
         scheduleArgs.add(java.sql.Date.valueOf(date));
+        scheduleArgs.add(date.getDayOfWeek().getValue());
         String scheduleChildFilter = "";
         if (childId != null) {
             scheduleChildFilter = " AND w.child_id = ? ";
@@ -267,11 +268,14 @@ public class ReportController {
         Map<String, Object> scheduleSummary = jdbcTemplate.queryForMap("""
                 SELECT
                   COUNT(*) AS planned_count,
-                  COALESCE(SUM(CASE WHEN w.status = 'DONE' THEN 1 ELSE 0 END), 0) AS done_count,
-                  COALESCE(SUM(CASE WHEN w.status <> 'DONE' THEN 1 ELSE 0 END), 0) AS pending_count
+                  COALESCE(SUM(CASE WHEN ci.status = 'DONE' THEN 1 ELSE 0 END), 0) AS done_count,
+                  COUNT(*) - COALESCE(SUM(CASE WHEN ci.status = 'DONE' THEN 1 ELSE 0 END), 0) AS pending_count
                 FROM weekly_schedule_items w
+                LEFT JOIN schedule_checkins ci
+                  ON ci.schedule_item_id = w.id
+                  AND ci.check_date = ?
                 WHERE w.status <> 'ARCHIVED'
-                  AND w.schedule_date = ?
+                  AND COALESCE(w.week_day, ((DAYOFWEEK(w.schedule_date) + 5) % 7) + 1) = ?
                 """ + scheduleChildFilter, scheduleArgs.toArray());
 
         List<Map<String, Object>> scheduleItems = jdbcTemplate.queryForList("""
@@ -279,24 +283,30 @@ public class ReportController {
                   w.id,
                   w.child_id,
                   ch.name AS child_name,
-                  w.schedule_date,
+                  COALESCE(w.week_day, ((DAYOFWEEK(w.schedule_date) + 5) % 7) + 1) AS week_day,
                   w.title,
                   w.planned_start_time,
                   w.planned_end_time,
-                  w.actual_start_at,
-                  w.actual_end_at,
                   w.note,
                   w.status,
+                  ci.check_date,
+                  ci.actual_start_at,
+                  ci.actual_end_at,
+                  ci.note AS checkin_note,
+                  ci.status AS checkin_status,
                   s.name AS subject_name,
                   c.name AS category_name
                 FROM weekly_schedule_items w
                 JOIN children ch ON ch.id = w.child_id
                 LEFT JOIN subjects s ON s.id = w.subject_id
                 LEFT JOIN item_categories c ON c.id = w.category_id
+                LEFT JOIN schedule_checkins ci
+                  ON ci.schedule_item_id = w.id
+                  AND ci.check_date = ?
                 WHERE w.status <> 'ARCHIVED'
-                  AND w.schedule_date = ?
+                  AND COALESCE(w.week_day, ((DAYOFWEEK(w.schedule_date) + 5) % 7) + 1) = ?
                 """ + scheduleChildFilter + """
-                ORDER BY w.planned_start_time, w.id
+                ORDER BY w.sort_order, w.planned_start_time, w.id
                 """, scheduleArgs.toArray());
 
         return ApiResponse.ok(Map.of(
