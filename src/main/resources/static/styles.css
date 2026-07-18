@@ -732,6 +732,14 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   font-size: 12px;
   white-space: nowrap;
 }
+.schedule-popover summary .schedule-status-pending {
+  color: #bf4d43;
+  font-weight: 850;
+}
+.schedule-popover summary .schedule-status-done {
+  color: #3f8f62;
+  font-weight: 850;
+}
 .schedule-detail {
   border-top: 1px dashed var(--line);
   margin-top: 8px;

@@ -675,7 +675,7 @@ function renderDailyAnalysis() {
     <div><strong>${Number(review.item_count || 0)}</strong><span>当天背诵项目</span></div>
     <div><strong>${Number(review.review_count || 0)}</strong><span>当天背诵次数</span></div>
     <div><strong>${Number(review.mastered_count || 0)}</strong><span>当天掌握</span></div>
-    <div><strong>${Number(schedule.done_count || 0)} / ${Number(schedule.planned_count || 0)}</strong><span>课程打卡完成</span></div>
+    <div><strong>${Number(schedule.done_count || 0)} / ${Number(schedule.planned_count || 0)}</strong><span>课程完成</span></div>
   `;
   $("analysisCategories").innerHTML = `
     <h3>类别分布</h3>
@@ -708,7 +708,7 @@ function renderDailyAnalysis() {
 }
 
 function renderAnalysisScheduleItem(item) {
-  const status = item.checkin_status === "DONE" ? "已打卡" : "未完成";
+  const status = item.checkin_status === "DONE" ? "完成" : "待完成";
   return `
     <article class="report-row">
       <div>
@@ -735,7 +735,7 @@ function renderWeekSchedule() {
   const summary = data.summary || {};
   $("scheduleSummary").innerHTML = `
     <div><strong>${Number(summary.planned_count || 0)}</strong><span>本周计划</span></div>
-    <div><strong>${Number(summary.done_count || 0)}</strong><span>已打卡</span></div>
+    <div><strong>${Number(summary.done_count || 0)}</strong><span>已完成</span></div>
     <div><strong>${Number(summary.pending_count || 0)}</strong><span>未完成</span></div>
     <div><strong>${completionRate(summary)}%</strong><span>完成率</span></div>
   `;
@@ -765,7 +765,7 @@ function renderScheduleCell(item) {
       <details class="schedule-popover">
         <summary>
           <strong>${escapeHtml(item.title)}</strong>
-          <span>${done ? "已打卡" : "待打卡"}</span>
+          <span class="${done ? "schedule-status-done" : "schedule-status-pending"}">${done ? "完成" : "待"}</span>
         </summary>
         <div class="schedule-detail">
           <div class="meta">${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / ${escapeHtml(item.category_name || "未分类")}</div>
@@ -774,13 +774,13 @@ function renderScheduleCell(item) {
             <label>实际开始<input id="schedule-start-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_start_at)}"></label>
             <label>实际结束<input id="schedule-end-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_end_at)}"></label>
           </div>
-          <input id="schedule-note-${item.id}" class="schedule-note" value="${escapeHtml(item.checkin_note || "")}" placeholder="打卡备注">
+          <input id="schedule-note-${item.id}" class="schedule-note" value="${escapeHtml(item.checkin_note || "")}" placeholder="备注">
           <div class="schedule-copy">
             <select id="schedule-copy-${item.id}">${renderWeekDayOptions(item.week_day)}</select>
             <button class="small-action" onclick="copyScheduleItem(${item.id})">复制到</button>
           </div>
           <div class="schedule-actions">
-            <button class="small-action primary" onclick="checkScheduleItem(${item.id}, ${done ? "false" : "true"})">${done ? "取消打卡" : "打卡"}</button>
+            <button class="small-action primary" onclick="checkScheduleItem(${item.id}, ${done ? "false" : "true"})">${done ? "取消" : "完成"}</button>
             <button class="small-action" onclick="saveScheduleItem(${item.id})">保存时间</button>
             <button class="small-action danger" onclick="deleteScheduleItem(${item.id})">删除模板</button>
           </div>
