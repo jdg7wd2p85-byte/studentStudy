@@ -193,7 +193,7 @@ public class ReportController {
         reviewArgs.add(Timestamp.valueOf(end));
         String reviewChildFilter = "";
         if (childId != null) {
-            reviewChildFilter = " AND r.child_id = ?";
+            reviewChildFilter = " AND r.child_id = ? ";
             reviewArgs.add(childId);
         }
 
@@ -261,7 +261,7 @@ public class ReportController {
         scheduleArgs.add(java.sql.Date.valueOf(date));
         String scheduleChildFilter = "";
         if (childId != null) {
-            scheduleChildFilter = " AND w.child_id = ?";
+            scheduleChildFilter = " AND w.child_id = ? ";
             scheduleArgs.add(childId);
         }
         Map<String, Object> scheduleSummary = jdbcTemplate.queryForMap("""
