@@ -607,6 +607,7 @@ function renderReport() {
   if (!state.report) return;
   const days = buildDailyTrend(state.report.dailyTrend || [], state.report.dailyCategories || []);
   const months = groupDaysByMonth(days);
+  const reviewDays = [...days].reverse().filter((day) => Number(day.review_count || 0) > 0);
   const maxReviews = Math.max(1, ...days.map((day) => Number(day.review_count || 0)));
   $("reviewHeatmap").innerHTML = `
     <h3>最近 60 天背诵热力图</h3>
@@ -628,7 +629,7 @@ function renderReport() {
   `;
   $("dailyReviewList").innerHTML = `
     <h3>每日背诵记录</h3>
-    ${days.filter((day) => Number(day.review_count || 0) > 0).map((day) => `
+    ${reviewDays.map((day) => `
       <article class="report-row">
         <div>
           <strong>${escapeHtml(day.date)}</strong>
@@ -1208,6 +1209,7 @@ function groupDaysByMonth(days) {
     }
     group.days.push(day);
   });
+  groups.forEach((group) => group.days.reverse());
   return groups;
 }
 
