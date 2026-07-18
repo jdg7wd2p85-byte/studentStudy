@@ -751,7 +751,7 @@ function renderWeekSchedule() {
     const rows = itemsByWeekDay.get(String(weekDay)) || [];
     return `
       <section class="schedule-day">
-        <h3>${weekDayName(index)}<span>${checkDateForWeekDay(weekDay).slice(5)}</span></h3>
+        <h3>${weekDayName(index)}</h3>
         ${rows.map(renderScheduleCell).join("") || `<div class="empty-note">未安排</div>`}
       </section>
     `;
@@ -760,7 +760,6 @@ function renderWeekSchedule() {
 
 function renderScheduleCell(item) {
   const done = item.checkin_status === "DONE";
-  const checkDate = checkDateForWeekDay(Number(item.week_day || 1));
   return `
     <article class="schedule-cell ${done ? "done" : ""}">
       <details class="schedule-popover">
@@ -770,7 +769,7 @@ function renderScheduleCell(item) {
         </summary>
         <div class="schedule-detail">
           <div class="meta">${escapeHtml(item.child_name || "")} / ${escapeHtml(item.subject_name || "未分科")} / ${escapeHtml(item.category_name || "未分类")}</div>
-          <div class="meta">计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)} / 打卡日 ${checkDate}</div>
+          <div class="meta">计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)}</div>
           <div class="schedule-times">
             <label>实际开始<input id="schedule-start-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_start_at)}"></label>
             <label>实际结束<input id="schedule-end-${item.id}" type="datetime-local" value="${datetimeLocalValue(item.actual_end_at)}"></label>
