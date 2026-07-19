@@ -84,11 +84,14 @@ $("historySelectedBtn").onclick = viewSelectedHistory;
 $("analysisLoadBtn").onclick = loadDailyAnalysis;
 $("scheduleLoadBtn").onclick = loadWeekSchedule;
 $("scheduleAddBtn").onclick = addScheduleItem;
+$("scheduleCopyDayBtn").onclick = copyScheduleDay;
+$("scheduleSaveOrderBtn").onclick = saveScheduleOrder;
 $("scheduleModalCopyBtn").onclick = () => copyScheduleItem(state.activeScheduleId);
 $("scheduleModalDoneBtn").onclick = () => {
   const item = activeScheduleItem();
   checkScheduleItem(state.activeScheduleId, item?.checkin_status !== "DONE");
 };
+$("scheduleModalTemplateSaveBtn").onclick = () => saveScheduleTemplate(state.activeScheduleId);
 $("scheduleModalSaveBtn").onclick = () => saveScheduleItem(state.activeScheduleId);
 $("scheduleModalDeleteBtn").onclick = () => deleteScheduleItem(state.activeScheduleId);
 $("addDreamBtn").onclick = addDream;
@@ -112,6 +115,7 @@ $("scheduleChildSelect").addEventListener("change", () => {
   loadDailyAnalysis();
 });
 $("scheduleSubjectSelect").addEventListener("change", renderScheduleCategorySelect);
+$("scheduleModalSubject").addEventListener("change", renderScheduleModalCategorySelect);
 document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
   input.addEventListener("change", loadItems);
 });
@@ -148,7 +152,12 @@ function renderCatalog() {
   fillSelect("scheduleChildSelect", state.catalog.children, "name");
   fillSelect("scheduleSubjectSelect", state.catalog.subjects, "name", "不限定科目");
   $("scheduleWeekDaySelect").innerHTML = renderWeekDayOptions($("scheduleWeekDaySelect").value);
+  $("scheduleCopyDaySource").innerHTML = renderWeekDayOptions("1");
+  $("scheduleCopyDayTarget").innerHTML = renderWeekDayOptions("2");
+  $("scheduleModalWeekDay").innerHTML = renderWeekDayOptions();
+  fillSelect("scheduleModalSubject", state.catalog.subjects, "name", "不限定科目");
   renderScheduleCategorySelect();
+  renderScheduleModalCategorySelect();
   renderCategoryFilter();
   syncSubjectWithCategory();
   renderStudyMenu();
@@ -194,6 +203,14 @@ function renderScheduleCategorySelect() {
     ? state.catalog.categories.filter((row) => String(row.subject_id || "") === String(subjectId))
     : state.catalog.categories;
   fillSelect("scheduleCategorySelect", categories, "name", "不限定类别");
+}
+
+function renderScheduleModalCategorySelect() {
+  const subjectId = $("scheduleModalSubject")?.value;
+  const categories = subjectId
+    ? state.catalog.categories.filter((row) => String(row.subject_id || "") === String(subjectId))
+    : state.catalog.categories;
+  fillSelect("scheduleModalCategory", categories, "name", "不限定类别");
 }
 
 function renderWeekDayOptions(selected = "") {
@@ -760,9 +777,10 @@ function renderWeekSchedule() {
   });
   $("weeklySchedule").innerHTML = Array.from({ length: 7 }, (_, index) => {
     const weekDay = index + 1;
-    const rows = itemsByWeekDay.get(String(weekDay)) || [];
+    const rows = (itemsByWeekDay.get(String(weekDay)) || [])
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
     return `
-      <section class="schedule-day">
+      <section class="schedule-day" data-week-day="${weekDay}" ondragover="allowScheduleDrop(event)" ondrop="dropScheduleItem(event, ${weekDay})">
         <h3>${weekDayName(index)}</h3>
         ${rows.map(renderScheduleCell).join("") || `<div class="empty-note">未安排</div>`}
       </section>
@@ -773,7 +791,7 @@ function renderWeekSchedule() {
 function renderScheduleCell(item) {
   const done = item.checkin_status === "DONE";
   return `
-    <button type="button" class="schedule-cell ${done ? "done" : ""}" onclick="openScheduleModal(${item.id})">
+    <button type="button" class="schedule-cell ${done ? "done" : ""}" draggable="true" data-id="${item.id}" onclick="openScheduleModal(${item.id})" ondragstart="dragScheduleItem(event, ${item.id})">
       <strong>${escapeHtml(item.title)}</strong>
       <span class="${done ? "schedule-status-done" : "schedule-status-pending"}">${done ? "完成" : "待"}</span>
     </button>
@@ -787,6 +805,13 @@ function openScheduleModal(id) {
   const done = item.checkin_status === "DONE";
   $("scheduleModalTitle").textContent = item.title || "课程";
   $("scheduleModalMeta").textContent = `${item.child_name || ""} / ${item.subject_name || "未分科"} / ${item.category_name || "未分类"} / ${weekDayName(Number(item.week_day || 1) - 1)} / 计划 ${formatTime(item.planned_start_time)} - ${formatTime(item.planned_end_time)}`;
+  $("scheduleModalTitleInput").value = item.title || "";
+  $("scheduleModalWeekDay").value = String(item.week_day || 1);
+  $("scheduleModalSubject").value = item.subject_id ? String(item.subject_id) : "";
+  renderScheduleModalCategorySelect();
+  $("scheduleModalCategory").value = item.category_id ? String(item.category_id) : "";
+  $("scheduleModalPlanStart").value = timeInputValue(item.planned_start_time);
+  $("scheduleModalPlanEnd").value = timeInputValue(item.planned_end_time);
   $("scheduleModalStart").value = datetimeLocalValue(item.actual_start_at);
   $("scheduleModalEnd").value = datetimeLocalValue(item.actual_end_at);
   $("scheduleModalNote").value = item.checkin_note || "";
@@ -835,6 +860,104 @@ async function copyScheduleItem(id) {
   });
   await loadWeekSchedule();
   closeScheduleModal();
+}
+
+async function copyScheduleDay() {
+  const sourceWeekDay = Number($("scheduleCopyDaySource").value);
+  const targetWeekDay = Number($("scheduleCopyDayTarget").value);
+  if (sourceWeekDay === targetWeekDay) {
+    alert("请选择不同的周几");
+    return;
+  }
+  await api("/api/schedule/days/copy", {
+    method: "POST",
+    body: JSON.stringify({
+      childId: Number($("scheduleChildSelect").value || $("childSelect").value),
+      sourceWeekDay,
+      targetWeekDay
+    })
+  });
+  await loadWeekSchedule();
+}
+
+async function saveScheduleTemplate(id) {
+  if (!id) return;
+  const title = $("scheduleModalTitleInput").value.trim();
+  if (!title) {
+    alert("请填写标题");
+    return;
+  }
+  const item = activeScheduleItem();
+  await api(`/api/schedule/items/${id}/template`, {
+    method: "POST",
+    body: JSON.stringify({
+      weekDay: Number($("scheduleModalWeekDay").value),
+      subjectId: $("scheduleModalSubject").value ? Number($("scheduleModalSubject").value) : null,
+      categoryId: $("scheduleModalCategory").value ? Number($("scheduleModalCategory").value) : null,
+      title,
+      plannedStartTime: $("scheduleModalPlanStart").value || null,
+      plannedEndTime: $("scheduleModalPlanEnd").value || null,
+      sortOrder: Number(item?.sort_order || 0)
+    })
+  });
+  await loadWeekSchedule();
+  closeScheduleModal();
+}
+
+function dragScheduleItem(event, id) {
+  event.dataTransfer.setData("text/plain", String(id));
+  event.dataTransfer.effectAllowed = "move";
+}
+
+function allowScheduleDrop(event) {
+  event.preventDefault();
+}
+
+function dropScheduleItem(event, weekDay) {
+  event.preventDefault();
+  const id = Number(event.dataTransfer.getData("text/plain"));
+  const item = (state.weeklySchedule?.items || []).find((row) => Number(row.id) === id);
+  if (!item) return;
+  item.week_day = weekDay;
+  const targetId = Number(event.target.closest(".schedule-cell")?.dataset.id || 0);
+  const sameDay = (state.weeklySchedule.items || []).filter((row) => Number(row.week_day || 1) === weekDay && Number(row.id) !== id);
+  const targetIndex = sameDay.findIndex((row) => Number(row.id) === targetId);
+  if (targetIndex >= 0) {
+    sameDay.splice(targetIndex, 0, item);
+  } else {
+    sameDay.push(item);
+  }
+  sameDay.forEach((row, index) => {
+    row.sort_order = index;
+  });
+  normalizeScheduleOrders();
+  renderWeekSchedule();
+}
+
+async function saveScheduleOrder() {
+  normalizeScheduleOrders();
+  const items = (state.weeklySchedule?.items || []).map((item) => ({
+    id: Number(item.id),
+    weekDay: Number(item.week_day || 1),
+    sortOrder: Number(item.sort_order || 0)
+  }));
+  await api("/api/schedule/items/reorder", {
+    method: "POST",
+    body: JSON.stringify({ items })
+  });
+  await loadWeekSchedule();
+}
+
+function normalizeScheduleOrders() {
+  weekDayLabels().forEach((_, index) => {
+    const weekDay = index + 1;
+    (state.weeklySchedule?.items || [])
+      .filter((item) => Number(item.week_day || 1) === weekDay)
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0))
+      .forEach((item, order) => {
+        item.sort_order = order;
+      });
+  });
 }
 
 async function checkScheduleItem(id, done) {
@@ -1316,6 +1439,11 @@ function formatDate(value) {
 
 function formatTime(value) {
   if (!value) return "未填";
+  return String(value).slice(0, 5);
+}
+
+function timeInputValue(value) {
+  if (!value) return "";
   return String(value).slice(0, 5);
 }
 

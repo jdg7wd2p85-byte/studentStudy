@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260718-5">
+  <link rel="stylesheet" href="/styles.css?v=20260719-1">
 </head>
 <body>
 <header class="app-header">
@@ -137,6 +137,12 @@ apple 苹果"></div>
       <label>计划结束<input id="scheduleEndTimeInput" type="time"></label>
       <button id="scheduleAddBtn" class="primary">添加到周课表</button>
     </div>
+    <div class="schedule-form compact">
+      <label>复制整天<select id="scheduleCopyDaySource"></select></label>
+      <label>复制到<select id="scheduleCopyDayTarget"></select></label>
+      <button id="scheduleCopyDayBtn">复制</button>
+      <button id="scheduleSaveOrderBtn" class="primary">保存排序</button>
+    </div>
     <div id="scheduleSummary" class="report-grid"></div>
     <div id="weeklySchedule" class="schedule-board"></div>
   </section>
@@ -212,6 +218,14 @@ apple 苹果"></div>
       <button id="scheduleCloseBtn" class="icon-btn">关闭</button>
     </div>
     <div id="scheduleModalMeta" class="meta"></div>
+    <div class="schedule-form modal-form">
+      <label>标题<input id="scheduleModalTitleInput"></label>
+      <label>周几<select id="scheduleModalWeekDay"></select></label>
+      <label>科目<select id="scheduleModalSubject"></select></label>
+      <label>类别<select id="scheduleModalCategory"></select></label>
+      <label>计划开始<input id="scheduleModalPlanStart" type="time"></label>
+      <label>计划结束<input id="scheduleModalPlanEnd" type="time"></label>
+    </div>
     <div class="schedule-times">
       <label>实际开始<input id="scheduleModalStart" type="datetime-local"></label>
       <label>实际结束<input id="scheduleModalEnd" type="datetime-local"></label>
@@ -223,12 +237,13 @@ apple 苹果"></div>
     </div>
     <div class="schedule-actions">
       <button id="scheduleModalDoneBtn" class="small-action primary">完成</button>
+      <button id="scheduleModalTemplateSaveBtn" class="small-action">保存课程</button>
       <button id="scheduleModalSaveBtn" class="small-action">保存时间</button>
       <button id="scheduleModalDeleteBtn" class="small-action danger">删除模板</button>
     </div>
   </div>
 </div>
 
-<script src="/app.js?v=20260718-5"></script>
+<script src="/app.js?v=20260719-1"></script>
 </body>
 </html>

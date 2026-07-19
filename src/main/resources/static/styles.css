@@ -674,6 +674,16 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 .schedule-form .wide {
   grid-column: span 2;
 }
+.schedule-form.compact {
+  grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+}
+.schedule-form.modal-form {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 12px;
+}
+.schedule-form.modal-form label:first-child {
+  grid-column: span 2;
+}
 .schedule-board {
   display: grid;
   gap: 10px;
@@ -767,7 +777,7 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 .schedule-actions {
   display: grid;
   gap: 6px;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   margin-top: 8px;
 }
 .schedule-actions .danger {

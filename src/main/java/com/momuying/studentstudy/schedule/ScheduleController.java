@@ -182,6 +182,38 @@ public class ScheduleController {
         return ApiResponse.ok(Map.of("id", id, "status", done ? "DONE" : "ACTIVE"));
     }
 
+    @PostMapping("/items/{id}/template")
+    public ApiResponse<Map<String, Object>> updateTemplate(@PathVariable Long id, @RequestBody ScheduleItemRequest request) {
+        int weekDay = normalizedWeekDay(request.weekDay(), request.scheduleDate());
+        if (isBlank(request.title())) {
+            throw new IllegalArgumentException("请填写课程标题");
+        }
+        int updated = jdbcTemplate.update("""
+                UPDATE weekly_schedule_items
+                SET schedule_date = ?,
+                    week_day = ?,
+                    subject_id = ?,
+                    category_id = ?,
+                    title = ?,
+                    planned_start_time = ?,
+                    planned_end_time = ?,
+                    note = COALESCE(?, note),
+                    sort_order = ?
+                WHERE id = ? AND status <> 'ARCHIVED'
+                """,
+                Date.valueOf(anchorDate(weekDay)),
+                weekDay,
+                request.subjectId(),
+                request.categoryId(),
+                request.title().trim(),
+                toTime(request.plannedStartTime()),
+                toTime(request.plannedEndTime()),
+                blankToNull(request.note()),
+                request.sortOrder() == null ? 0 : request.sortOrder(),
+                id);
+        return ApiResponse.ok(Map.of("id", id, "updated", updated));
+    }
+
     @PostMapping("/items/{id}/update")
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id, @RequestBody ScheduleCheckRequest request) {
         if (request.checkDate() == null) {
@@ -238,6 +270,53 @@ public class ScheduleController {
                 item.get("note"),
                 item.get("sort_order"));
         return ApiResponse.ok(Map.of("copied", 1, "targetWeekDay", targetWeekDay));
+    }
+
+    @PostMapping("/days/copy")
+    public ApiResponse<Map<String, Object>> copyDay(@RequestBody ScheduleDayCopyRequest request) {
+        int sourceWeekDay = normalizedWeekDay(request.sourceWeekDay(), null);
+        int targetWeekDay = normalizedWeekDay(request.targetWeekDay(), null);
+        List<Object> args = new ArrayList<>();
+        args.add(Date.valueOf(anchorDate(targetWeekDay)));
+        args.add(targetWeekDay);
+        args.add(sourceWeekDay);
+        String childFilter = "";
+        if (request.childId() != null) {
+            childFilter = " AND child_id = ? ";
+            args.add(request.childId());
+        }
+        int copied = jdbcTemplate.update("""
+                INSERT INTO weekly_schedule_items(
+                  child_id, schedule_date, week_day, subject_id, category_id, title,
+                  planned_start_time, planned_end_time, note, sort_order, status
+                )
+                SELECT child_id, ?, ?, subject_id, category_id, title,
+                       planned_start_time, planned_end_time, note, sort_order, 'ACTIVE'
+                FROM weekly_schedule_items
+                WHERE status <> 'ARCHIVED'
+                  AND COALESCE(week_day, ((DAYOFWEEK(schedule_date) + 5) % 7) + 1) = ?
+                """ + childFilter, args.toArray());
+        return ApiResponse.ok(Map.of("copied", copied, "sourceWeekDay", sourceWeekDay, "targetWeekDay", targetWeekDay));
+    }
+
+    @PostMapping("/items/reorder")
+    public ApiResponse<Map<String, Object>> reorder(@RequestBody ScheduleReorderRequest request) {
+        if (request.items() == null) {
+            return ApiResponse.ok(Map.of("updated", 0));
+        }
+        int updated = 0;
+        for (ScheduleReorderRequest.ScheduleOrderItem item : request.items()) {
+            if (item.id() == null || item.weekDay() == null || item.sortOrder() == null) continue;
+            int weekDay = normalizedWeekDay(item.weekDay(), null);
+            updated += jdbcTemplate.update("""
+                    UPDATE weekly_schedule_items
+                    SET week_day = ?,
+                        schedule_date = ?,
+                        sort_order = ?
+                    WHERE id = ? AND status <> 'ARCHIVED'
+                    """, weekDay, Date.valueOf(anchorDate(weekDay)), item.sortOrder(), item.id());
+        }
+        return ApiResponse.ok(Map.of("updated", updated));
     }
 
     @DeleteMapping("/items/{id}")
