@@ -8,6 +8,7 @@ const state = {
   dailyAnalysis: null,
   weeklySchedule: null,
   activeScheduleId: null,
+  itemRequestSeq: 0,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set(),
@@ -360,6 +361,7 @@ function setRawText(value) {
 }
 
 async function loadItems() {
+  const requestSeq = ++state.itemRequestSeq;
   const params = new URLSearchParams();
   if ($("keywordInput")?.value) params.set("keyword", $("keywordInput").value);
   if ($("subjectFilterSelect")?.value) params.set("subjectId", $("subjectFilterSelect").value);
@@ -367,7 +369,9 @@ async function loadItems() {
   if ($("tagFilterInput")?.value) params.set("tag", $("tagFilterInput").value);
   const statuses = selectedStatuses();
   if (statuses.length) params.set("reviewStatus", statuses.join(","));
-  state.items = await api(`/api/items?${params}`);
+  const rows = await api(`/api/items?${params}`);
+  if (requestSeq !== state.itemRequestSeq) return;
+  state.items = rows;
   renderItems();
   updateSelectionBar();
 }

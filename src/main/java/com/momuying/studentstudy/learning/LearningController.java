@@ -137,8 +137,22 @@ public class LearningController {
             args.add(categoryId);
         }
         if (keyword != null && !keyword.isBlank()) {
-            sql.append(" AND (i.title LIKE ? OR i.answer LIKE ? OR i.content LIKE ?)");
+            sql.append("""
+                     AND (
+                       i.title LIKE ?
+                       OR i.answer LIKE ?
+                       OR i.content LIKE ?
+                       OR i.source LIKE ?
+                       OR i.tags LIKE ?
+                       OR s.name LIKE ?
+                       OR c.name LIKE ?
+                     )
+                    """);
             String like = "%" + keyword.trim() + "%";
+            args.add(like);
+            args.add(like);
+            args.add(like);
+            args.add(like);
             args.add(like);
             args.add(like);
             args.add(like);
