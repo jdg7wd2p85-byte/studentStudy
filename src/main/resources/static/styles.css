@@ -391,6 +391,10 @@ textarea { resize: vertical; line-height: 1.5; }
 .selection-actions button {
   min-width: 92px;
 }
+.selection-actions select {
+  min-height: 42px;
+  min-width: 120px;
+}
 
 .review-card { min-height: 280px; padding: 18px; }
 .review-card.empty { color: var(--muted); display: grid; place-items: center; }
@@ -881,6 +885,7 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   .form-grid, .search-row { grid-template-columns: 1fr; }
   .selection-bar { align-items: stretch; flex-direction: column; }
   .selection-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .selection-actions select { width: 100%; }
   .rating { grid-template-columns: 1fr 1fr; }
   .summary { gap: 8px; }
   .summary div { padding: 11px 8px; }

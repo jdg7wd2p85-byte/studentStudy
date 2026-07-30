@@ -81,6 +81,13 @@ $("resetFiltersBtn").onclick = resetFilters;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("makeChoiceQuizBtn").onclick = makeChoiceQuiz;
+$("makeChoiceFromListBtn").onclick = makeChoiceQuiz;
+$("choiceDirectionListSelect").onchange = () => {
+  $("choiceDirectionSelect").value = $("choiceDirectionListSelect").value;
+};
+$("choiceDirectionSelect").onchange = () => {
+  $("choiceDirectionListSelect").value = $("choiceDirectionSelect").value;
+};
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
 $("historySelectedBtn").onclick = viewSelectedHistory;
 $("analysisLoadBtn").onclick = loadDailyAnalysis;
@@ -681,6 +688,9 @@ function updateSelectionBar() {
   }
   if ($("makeChoiceQuizBtn")) {
     $("makeChoiceQuizBtn").disabled = count === 0;
+  }
+  if ($("makeChoiceFromListBtn")) {
+    $("makeChoiceFromListBtn").disabled = count === 0;
   }
   if ($("deleteSelectedBtn")) {
     $("deleteSelectedBtn").disabled = count === 0;
