@@ -80,6 +80,7 @@ $("searchBtn").onclick = loadItems;
 $("resetFiltersBtn").onclick = resetFilters;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
+$("makeChoiceQuizBtn").onclick = makeChoiceQuiz;
 $("deleteSelectedBtn").onclick = deleteSelectedItems;
 $("historySelectedBtn").onclick = viewSelectedHistory;
 $("analysisLoadBtn").onclick = loadDailyAnalysis;
@@ -549,6 +550,54 @@ async function makePaper() {
   `;
 }
 
+async function makeChoiceQuiz() {
+  const itemIds = [...state.selected];
+  if (!itemIds.length) {
+    alert("请先在列表里勾选单词");
+    return;
+  }
+  const direction = $("choiceDirectionSelect").value;
+  const questions = await api("/api/practice/choices", {
+    method: "POST",
+    body: JSON.stringify({ itemIds, direction })
+  });
+  showTab("paper");
+  $("paperPreview").innerHTML = `
+    <h3>${direction === "CN_TO_EN" ? "中文选英文" : "英文选中文"}</h3>
+    ${questions.map(renderChoiceQuestion).join("")}
+  `;
+}
+
+function renderChoiceQuestion(question, index) {
+  return `
+    <article class="choice-question" data-correct="${escapeHtml(question.correctOption)}">
+      <div class="choice-head">
+        <span class="badge">${index + 1}</span>
+        <strong>${escapeHtml(question.prompt)}</strong>
+      </div>
+      <div class="choice-options">
+        ${(question.options || []).map((option) => `
+          <button type="button" onclick="chooseOption(this)">${escapeHtml(option)}</button>
+        `).join("")}
+      </div>
+      <div class="choice-result"></div>
+    </article>
+  `;
+}
+
+function chooseOption(button) {
+  const question = button.closest(".choice-question");
+  const correctOption = question.dataset.correct;
+  const chosen = button.textContent;
+  const correct = chosen === correctOption;
+  question.querySelectorAll(".choice-options button").forEach((option) => {
+    option.disabled = true;
+    if (option.textContent === correctOption) option.classList.add("correct");
+  });
+  button.classList.add(correct ? "correct" : "wrong");
+  question.querySelector(".choice-result").textContent = correct ? "答对了" : `答错了，正确答案：${correctOption}`;
+}
+
 async function deleteSelectedItems() {
   const itemIds = [...state.selected];
   if (!itemIds.length) {
@@ -629,6 +678,9 @@ function updateSelectionBar() {
   }
   if ($("makePaperBtn")) {
     $("makePaperBtn").disabled = count === 0;
+  }
+  if ($("makeChoiceQuizBtn")) {
+    $("makeChoiceQuizBtn").disabled = count === 0;
   }
   if ($("deleteSelectedBtn")) {
     $("deleteSelectedBtn").disabled = count === 0;

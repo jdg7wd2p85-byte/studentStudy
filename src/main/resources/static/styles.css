@@ -451,6 +451,51 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
 .rating button:nth-child(4) { color: var(--ok); }
 .paper { background: var(--paper); border: 1px dashed var(--brand); border-radius: 8px; padding: 12px; }
 .paper-question { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.paper-actions { align-items: center; flex-wrap: wrap; }
+.paper-actions select { min-height: 42px; }
+.choice-question {
+  background: linear-gradient(180deg, #ffffff, #fbfff7);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 12px 0;
+  padding: 12px;
+}
+.choice-head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.choice-head strong {
+  color: var(--brand-dark);
+  font-size: 20px;
+}
+.choice-options {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 1fr;
+}
+.choice-options button {
+  background: #fffdf4;
+  border: 1px solid var(--line);
+  min-height: 48px;
+  white-space: normal;
+}
+.choice-options button.correct {
+  background: #dff2de;
+  border-color: #3f8f62;
+  color: #24583c;
+}
+.choice-options button.wrong {
+  background: #fde8e2;
+  border-color: #bf4d43;
+  color: #8d352e;
+}
+.choice-result {
+  color: var(--brand-dark);
+  font-weight: 800;
+  margin-top: 10px;
+}
 .hint { margin-top: 0; }
 .dream-board textarea {
   min-height: 110px;
@@ -852,6 +897,7 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   .card-title { font-size: 30px; }
   .report-grid { grid-template-columns: 1fr 1fr; }
   .report-row { align-items: flex-start; flex-direction: column; }
+  .choice-options { grid-template-columns: 1fr; }
   .analysis-toolbar,
   .schedule-toolbar,
   .schedule-form {

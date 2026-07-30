@@ -7,8 +7,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/practice")
@@ -79,6 +82,46 @@ public class PracticeController {
         return ApiResponse.ok(paper(paperId));
     }
 
+    @PostMapping("/choices")
+    public ApiResponse<List<Map<String, Object>>> choices(@RequestBody ChoiceQuizRequest request) {
+        if (request.itemIds() == null || request.itemIds().isEmpty()) {
+            throw new IllegalArgumentException("请选择至少一个单词");
+        }
+        String placeholders = String.join(",", request.itemIds().stream().map(id -> "?").toList());
+        List<Map<String, Object>> selected = jdbcTemplate.queryForList("""
+                SELECT i.id, i.title, i.answer, i.content, c.code AS category_code
+                FROM learning_items i
+                JOIN item_categories c ON c.id = i.category_id
+                WHERE i.status <> 'ARCHIVED'
+                  AND c.code = 'WORD'
+                  AND i.answer IS NOT NULL
+                  AND i.answer <> ''
+                  AND i.id IN (
+                """ + placeholders + """
+                  )
+                ORDER BY i.id DESC
+                """, request.itemIds().toArray());
+        if (selected.isEmpty()) {
+            throw new IllegalArgumentException("请选择英文单词类型的学习项");
+        }
+        List<Map<String, Object>> pool = jdbcTemplate.queryForList("""
+                SELECT i.id, i.title, i.answer
+                FROM learning_items i
+                JOIN item_categories c ON c.id = i.category_id
+                WHERE i.status <> 'ARCHIVED'
+                  AND c.code = 'WORD'
+                  AND i.answer IS NOT NULL
+                  AND i.answer <> ''
+                ORDER BY i.id DESC
+                LIMIT 300
+                """);
+        String direction = request.direction() == null ? "EN_TO_CN" : request.direction();
+        List<Map<String, Object>> questions = selected.stream()
+                .map(item -> choiceQuestion(item, pool, direction))
+                .toList();
+        return ApiResponse.ok(questions);
+    }
+
     private Map<String, Object> paper(Long paperId) {
         Map<String, Object> paper = jdbcTemplate.queryForMap("SELECT * FROM practice_papers WHERE id = ?", paperId);
         List<Map<String, Object>> items = jdbcTemplate.queryForList(
@@ -105,12 +148,52 @@ public class PracticeController {
         return "QA";
     }
 
+    private Map<String, Object> choiceQuestion(Map<String, Object> item, List<Map<String, Object>> pool, String direction) {
+        boolean chineseToEnglish = "CN_TO_EN".equals(direction);
+        String prompt = chineseToEnglish ? answerOf(item) : String.valueOf(item.get("title"));
+        String correct = chineseToEnglish ? String.valueOf(item.get("title")) : answerOf(item);
+        Set<String> options = new LinkedHashSet<>();
+        options.add(correct);
+        List<String> distractors = new ArrayList<>(pool.stream()
+                .filter(row -> !String.valueOf(row.get("id")).equals(String.valueOf(item.get("id"))))
+                .map(row -> chineseToEnglish ? String.valueOf(row.get("title")) : answerOf(row))
+                .filter(value -> value != null && !value.isBlank() && !value.equals(correct))
+                .toList());
+        Collections.shuffle(distractors);
+        for (String distractor : distractors) {
+            if (options.size() >= 4) break;
+            options.add(distractor);
+        }
+        List<String> shuffled = new ArrayList<>(options);
+        Collections.shuffle(shuffled);
+        return Map.of(
+                "itemId", item.get("id"),
+                "prompt", prompt,
+                "direction", direction,
+                "options", shuffled,
+                "correctOption", correct
+        );
+    }
+
+    private String answerOf(Map<String, Object> item) {
+        Object answer = item.get("answer");
+        if (answer != null && !String.valueOf(answer).isBlank()) return String.valueOf(answer);
+        Object content = item.get("content");
+        return content == null ? "" : String.valueOf(content);
+    }
+
     public record CreatePaperRequest(
             Long childId,
             String title,
             String sourceType,
             boolean includeAnswer,
             List<Long> itemIds
+    ) {
+    }
+
+    public record ChoiceQuizRequest(
+            List<Long> itemIds,
+            String direction
     ) {
     }
 }
