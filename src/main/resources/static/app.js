@@ -78,6 +78,7 @@ $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
 $("searchBtn").onclick = loadItems;
 $("resetFiltersBtn").onclick = resetFilters;
+$("selectVisibleBtn").onclick = toggleSelectVisible;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("makeChoiceQuizBtn").onclick = makeChoiceQuiz;
@@ -423,6 +424,24 @@ function renderItems() {
   updateSelectionBar();
 }
 
+function visibleItemIds() {
+  return state.items.map((item) => Number(item.id)).filter((id) => Number.isFinite(id));
+}
+
+function toggleSelectVisible() {
+  const ids = visibleItemIds();
+  if (!ids.length) return;
+  const allSelected = ids.every((id) => state.selected.has(id));
+  ids.forEach((id) => {
+    if (allSelected) {
+      state.selected.delete(id);
+    } else {
+      state.selected.add(id);
+    }
+  });
+  renderItems();
+}
+
 function renderItemCard(item) {
   const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
   if (isLongTextItem(item)) {
@@ -577,7 +596,7 @@ async function makeChoiceQuiz() {
 
 function renderChoiceQuestion(question, index) {
   return `
-    <article class="choice-question" data-correct="${escapeHtml(question.correctOption)}">
+    <article class="choice-question" data-item-id="${question.itemId}" data-correct="${escapeHtml(question.correctOption)}">
       <div class="choice-head">
         <span class="badge">${index + 1}</span>
         <strong>${escapeHtml(question.prompt)}</strong>
@@ -592,17 +611,32 @@ function renderChoiceQuestion(question, index) {
   `;
 }
 
-function chooseOption(button) {
+async function chooseOption(button) {
   const question = button.closest(".choice-question");
   const correctOption = question.dataset.correct;
+  const itemId = Number(question.dataset.itemId);
   const chosen = button.textContent;
   const correct = chosen === correctOption;
+  const result = question.querySelector(".choice-result");
   question.querySelectorAll(".choice-options button").forEach((option) => {
     option.disabled = true;
     if (option.textContent === correctOption) option.classList.add("correct");
   });
   button.classList.add(correct ? "correct" : "wrong");
-  question.querySelector(".choice-result").textContent = correct ? "答对了" : `答错了，正确答案：${correctOption}`;
+  result.textContent = correct ? "答对了，正在记录熟练..." : `答错了，正确答案：${correctOption}，正在记录不会...`;
+  try {
+    await api(`/api/reviews/${itemId}/submit`, {
+      method: "POST",
+      body: JSON.stringify({
+        rating: correct ? 3 : 0,
+        note: correct ? "选择题答对，自动记录熟练" : "选择题答错，自动记录不会"
+      })
+    });
+    await Promise.all([loadItems(), loadToday(), loadReport()]);
+    result.textContent = correct ? "答对了，已记录为熟练" : `答错了，正确答案：${correctOption}，已记录为不会`;
+  } catch (error) {
+    result.textContent = `记录失败：${error.message || "请稍后重试"}`;
+  }
 }
 
 async function deleteSelectedItems() {
@@ -679,6 +713,12 @@ function updateSelectionBar() {
   }
   if ($("historySelectedBtn")) {
     $("historySelectedBtn").disabled = count !== 1;
+  }
+  if ($("selectVisibleBtn")) {
+    const ids = visibleItemIds();
+    const allSelected = ids.length > 0 && ids.every((id) => state.selected.has(id));
+    $("selectVisibleBtn").disabled = ids.length === 0;
+    $("selectVisibleBtn").textContent = allSelected ? "取消当前全选" : "全选当前列表";
   }
   if ($("makePaperFromListBtn")) {
     $("makePaperFromListBtn").disabled = count === 0;
