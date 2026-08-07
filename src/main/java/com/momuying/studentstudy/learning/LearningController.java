@@ -200,8 +200,9 @@ public class LearningController {
             }
         }
         int safePageSize = Math.max(10, Math.min(200, pageSize));
+        String countSql = "SELECT COUNT(*) " + sql.substring(sql.indexOf("FROM learning_items i"));
         Long total = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM (" + sql + ") filtered_items",
+                countSql,
                 Long.class,
                 args.toArray()
         );

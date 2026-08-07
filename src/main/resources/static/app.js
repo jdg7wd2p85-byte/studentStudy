@@ -13,6 +13,7 @@ const state = {
   itemPageSize: 50,
   itemTotal: 0,
   itemTotalPages: 1,
+  itemPageLoading: false,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set(),
@@ -390,22 +391,7 @@ async function loadItems() {
   if (statuses.length) params.set("reviewStatus", statuses.join(","));
   params.set("page", state.itemPage);
   params.set("pageSize", state.itemPageSize);
-  let result;
-  try {
-    result = await api(`/api/items/page?${params}`);
-  } catch (error) {
-    const legacyParams = new URLSearchParams(params);
-    legacyParams.delete("page");
-    legacyParams.delete("pageSize");
-    const rows = await api(`/api/items?${legacyParams}`);
-    result = {
-      items: Array.isArray(rows) ? rows : [],
-      page: 1,
-      pageSize: Array.isArray(rows) ? rows.length : state.itemPageSize,
-      total: Array.isArray(rows) ? rows.length : 0,
-      totalPages: 1
-    };
-  }
+  const result = await api(`/api/items/page?${params}`);
   if (requestSeq !== state.itemRequestSeq) return;
   state.items = result.items || [];
   state.itemPage = Number(result.page) || 1;
@@ -422,17 +408,31 @@ function resetItemPageAndLoad() {
   loadItems();
 }
 
-function changeItemPage(offset) {
+async function changeItemPage(offset) {
+  if (state.itemPageLoading) return;
   const nextPage = Math.max(1, Math.min(state.itemTotalPages, state.itemPage + offset));
   if (nextPage === state.itemPage) return;
+  const previousPage = state.itemPage;
   state.itemPage = nextPage;
-  loadItems();
+  state.itemPageLoading = true;
+  renderItemsPagination();
+  try {
+    await loadItems();
+  } catch (error) {
+    state.itemPage = previousPage;
+    alert(`第 ${nextPage} 页加载失败：${error.message || "请稍后重试"}`);
+  } finally {
+    state.itemPageLoading = false;
+    renderItemsPagination();
+  }
 }
 
 function renderItemsPagination() {
-  $("itemsPageInfo").textContent = `第 ${state.itemPage} / ${state.itemTotalPages} 页 · 共 ${state.itemTotal} 条`;
-  $("previousItemsPageBtn").disabled = state.itemPage <= 1;
-  $("nextItemsPageBtn").disabled = state.itemPage >= state.itemTotalPages;
+  $("itemsPageInfo").textContent = state.itemPageLoading
+    ? `正在加载第 ${state.itemPage} 页…`
+    : `第 ${state.itemPage} / ${state.itemTotalPages} 页 · 共 ${state.itemTotal} 条`;
+  $("previousItemsPageBtn").disabled = state.itemPageLoading || state.itemPage <= 1;
+  $("nextItemsPageBtn").disabled = state.itemPageLoading || state.itemPage >= state.itemTotalPages;
   $("itemsPageSizeSelect").value = String(state.itemPageSize);
 }
 
