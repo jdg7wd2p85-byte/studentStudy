@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260730-3">
+  <link rel="stylesheet" href="/styles.css?v=20260807-1">
 </head>
 <body>
 <header class="app-header">
@@ -86,6 +86,19 @@ apple 苹果"></div>
       <label><input type="checkbox" value="vague"> 模糊</label>
       <label><input type="checkbox" value="ok"> 基本会</label>
       <label><input type="checkbox" value="fluent"> 熟练</label>
+    </div>
+    <div class="pagination-bar" aria-label="学习项分页">
+      <button id="previousItemsPageBtn">上一页</button>
+      <strong id="itemsPageInfo">第 1 / 1 页</strong>
+      <button id="nextItemsPageBtn">下一页</button>
+      <label>每页
+        <select id="itemsPageSizeSelect">
+          <option value="20">20 条</option>
+          <option value="50" selected>50 条</option>
+          <option value="100">100 条</option>
+          <option value="200">200 条</option>
+        </select>
+      </label>
     </div>
     <div class="selection-bar">
       <span id="selectedCount">已选 0 项</span>
@@ -255,6 +268,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260730-3"></script>
+<script src="/app.js?v=20260807-1"></script>
 </body>
 </html>

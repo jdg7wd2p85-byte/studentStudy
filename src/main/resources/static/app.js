@@ -9,6 +9,10 @@ const state = {
   weeklySchedule: null,
   activeScheduleId: null,
   itemRequestSeq: 0,
+  itemPage: 1,
+  itemPageSize: 50,
+  itemTotal: 0,
+  itemTotalPages: 1,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set(),
@@ -76,8 +80,14 @@ $("scheduleModal").onclick = (event) => {
 };
 $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
-$("searchBtn").onclick = loadItems;
+$("searchBtn").onclick = resetItemPageAndLoad;
 $("resetFiltersBtn").onclick = resetFilters;
+$("previousItemsPageBtn").onclick = () => changeItemPage(-1);
+$("nextItemsPageBtn").onclick = () => changeItemPage(1);
+$("itemsPageSizeSelect").onchange = () => {
+  state.itemPageSize = Number($("itemsPageSizeSelect").value) || 50;
+  resetItemPageAndLoad();
+};
 $("selectVisibleBtn").onclick = toggleSelectVisible;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
@@ -113,13 +123,13 @@ window.addEventListener("hashchange", handleRoute);
 $("categorySelect").addEventListener("change", () => {
   syncSubjectWithCategory();
   syncListFilterWithCategory();
-  loadItems();
+  resetItemPageAndLoad();
 });
 $("subjectFilterSelect").addEventListener("change", () => {
   renderCategoryFilter();
-  loadItems();
+  resetItemPageAndLoad();
 });
-$("categoryFilterSelect").addEventListener("change", loadItems);
+$("categoryFilterSelect").addEventListener("change", resetItemPageAndLoad);
 $("scheduleChildSelect").addEventListener("change", () => {
   loadWeekSchedule();
   loadDailyAnalysis();
@@ -127,7 +137,7 @@ $("scheduleChildSelect").addEventListener("change", () => {
 $("scheduleSubjectSelect").addEventListener("change", renderScheduleCategorySelect);
 $("scheduleModalSubject").addEventListener("change", renderScheduleModalCategorySelect);
 document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
-  input.addEventListener("change", loadItems);
+  input.addEventListener("change", resetItemPageAndLoad);
 });
 $("pasteBox").addEventListener("input", syncPasteBoxToRawText);
 $("pasteBox").addEventListener("paste", pastePlainText);
@@ -265,7 +275,7 @@ function openStudyMenu(subjectName, categoryName) {
     input.checked = false;
   });
   showTab(categoryName === "火箭游戏" ? "rocket" : "items");
-  if (categoryName !== "火箭游戏") loadItems();
+  if (categoryName !== "火箭游戏") resetItemPageAndLoad();
 }
 
 function handleRoute() {
@@ -378,11 +388,52 @@ async function loadItems() {
   if ($("tagFilterInput")?.value) params.set("tag", $("tagFilterInput").value);
   const statuses = selectedStatuses();
   if (statuses.length) params.set("reviewStatus", statuses.join(","));
-  const rows = await api(`/api/items?${params}`);
+  params.set("page", state.itemPage);
+  params.set("pageSize", state.itemPageSize);
+  let result;
+  try {
+    result = await api(`/api/items/page?${params}`);
+  } catch (error) {
+    const legacyParams = new URLSearchParams(params);
+    legacyParams.delete("page");
+    legacyParams.delete("pageSize");
+    const rows = await api(`/api/items?${legacyParams}`);
+    result = {
+      items: Array.isArray(rows) ? rows : [],
+      page: 1,
+      pageSize: Array.isArray(rows) ? rows.length : state.itemPageSize,
+      total: Array.isArray(rows) ? rows.length : 0,
+      totalPages: 1
+    };
+  }
   if (requestSeq !== state.itemRequestSeq) return;
-  state.items = rows;
+  state.items = result.items || [];
+  state.itemPage = Number(result.page) || 1;
+  state.itemPageSize = Number(result.pageSize) || state.itemPageSize;
+  state.itemTotal = Number(result.total) || 0;
+  state.itemTotalPages = Number(result.totalPages) || 1;
   renderItems();
+  renderItemsPagination();
   updateSelectionBar();
+}
+
+function resetItemPageAndLoad() {
+  state.itemPage = 1;
+  loadItems();
+}
+
+function changeItemPage(offset) {
+  const nextPage = Math.max(1, Math.min(state.itemTotalPages, state.itemPage + offset));
+  if (nextPage === state.itemPage) return;
+  state.itemPage = nextPage;
+  loadItems();
+}
+
+function renderItemsPagination() {
+  $("itemsPageInfo").textContent = `第 ${state.itemPage} / ${state.itemTotalPages} 页 · 共 ${state.itemTotal} 条`;
+  $("previousItemsPageBtn").disabled = state.itemPage <= 1;
+  $("nextItemsPageBtn").disabled = state.itemPage >= state.itemTotalPages;
+  $("itemsPageSizeSelect").value = String(state.itemPageSize);
 }
 
 function resetFilters() {
@@ -394,7 +445,7 @@ function resetFilters() {
   document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
     input.checked = false;
   });
-  loadItems();
+  resetItemPageAndLoad();
 }
 
 async function loadToday() {
@@ -709,7 +760,7 @@ function selectedStatuses() {
 function updateSelectionBar() {
   const count = state.selected.size;
   if ($("selectedCount")) {
-    $("selectedCount").textContent = `当前 ${state.items.length} 项 / 已选 ${count} 项`;
+    $("selectedCount").textContent = `本页 ${state.items.length} 项 / 共 ${state.itemTotal} 项 / 跨页已选 ${count} 项`;
   }
   if ($("historySelectedBtn")) {
     $("historySelectedBtn").disabled = count !== 1;
@@ -1437,7 +1488,7 @@ function applyStatusFilter(status) {
     input.checked = input.value === status;
   });
   showTab("items");
-  loadItems();
+  resetItemPageAndLoad();
 }
 
 function buildDailyTrend(rows, categoryRows) {

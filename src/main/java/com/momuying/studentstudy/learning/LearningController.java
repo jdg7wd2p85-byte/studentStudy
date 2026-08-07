@@ -107,14 +107,16 @@ public class LearningController {
         return ApiResponse.ok(Map.of("deleted", deleted));
     }
 
-    @GetMapping("/items")
-    public ApiResponse<List<Map<String, Object>>> items(
+    @GetMapping("/items/page")
+    public ApiResponse<Map<String, Object>> itemsPage(
             @RequestParam(required = false) Long childId,
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String tag,
-            @RequestParam(required = false) String reviewStatus
+            @RequestParam(required = false) String reviewStatus,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int pageSize
     ) {
         StringBuilder sql = new StringBuilder("""
                 SELECT i.*, c.name AS category_name, s.name AS subject_name
@@ -197,8 +199,45 @@ public class LearningController {
                 args.addAll(ratings);
             }
         }
-        sql.append(" ORDER BY i.next_review_at ASC, i.mastery_score ASC, i.id DESC LIMIT 200");
-        return ApiResponse.ok(jdbcTemplate.queryForList(sql.toString(), args.toArray()));
+        int safePageSize = Math.max(10, Math.min(200, pageSize));
+        Long total = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM (" + sql + ") filtered_items",
+                Long.class,
+                args.toArray()
+        );
+        long safeTotal = total == null ? 0 : total;
+        int totalPages = Math.max(1, (int) Math.ceil((double) safeTotal / safePageSize));
+        int safePage = Math.max(1, Math.min(page, totalPages));
+        int offset = (safePage - 1) * safePageSize;
+
+        sql.append(" ORDER BY i.next_review_at ASC, i.mastery_score ASC, i.id DESC LIMIT ? OFFSET ?");
+        args.add(safePageSize);
+        args.add(offset);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), args.toArray());
+        return ApiResponse.ok(Map.of(
+                "items", rows,
+                "page", safePage,
+                "pageSize", safePageSize,
+                "total", safeTotal,
+                "totalPages", totalPages
+        ));
+    }
+
+    @GetMapping("/items")
+    public ApiResponse<List<Map<String, Object>>> items(
+            @RequestParam(required = false) Long childId,
+            @RequestParam(required = false) Long subjectId,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false) String reviewStatus
+    ) {
+        Map<String, Object> page = itemsPage(
+                childId, subjectId, categoryId, keyword, tag, reviewStatus, 1, 200
+        ).data();
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rows = (List<Map<String, Object>>) page.get("items");
+        return ApiResponse.ok(rows);
     }
 
     @GetMapping("/reviews/today")
