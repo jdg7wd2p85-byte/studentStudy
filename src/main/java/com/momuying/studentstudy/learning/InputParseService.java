@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
 public class InputParseService {
     private static final Pattern OBSIDIAN_WORD = Pattern.compile("^#([^\\s#%]+)\\s+(.+?)\\s+%%(.+?)%%\\s*(.*)$");
     private static final Pattern KEY_VALUE = Pattern.compile("^(.+?)\\s*(?:[:：=|])\\s*(.+)$");
-    private static final Pattern WORD_SPACE_MEANING = Pattern.compile("^([A-Za-z][A-Za-z'\\-]*)\\s+(.+)$");
+    private static final Pattern ENGLISH_WITH_CHINESE_MEANING = Pattern.compile("^([A-Za-z][A-Za-z' -]*?[A-Za-z])\\s+([\\p{IsHan}].+)$");
+    private static final Pattern DETAIL_SPLIT = Pattern.compile("\\s*(?:\\|\\||;;|；；)\\s*");
 
     public List<ParsedItem> parse(ParseRequest request) {
         if (request.rawText() == null || request.rawText().isBlank()) {
@@ -56,6 +57,7 @@ public class InputParseService {
                 if (trailing.matches("\\d+")) {
                     extra.put("sourceIndex", Integer.parseInt(trailing));
                 }
+                mergeVocabularyDetails(extra, trailing);
             }
             return new ParsedItem(line, "WORD", "FLASHCARD", word, word, null, meaning, null,
                     distinct(tags), extra, 0.96, warnings);
@@ -65,20 +67,23 @@ public class InputParseService {
             Matcher kv = KEY_VALUE.matcher(line);
             if (kv.matches()) {
                 String key = kv.group(1).trim();
-                String value = kv.group(2).trim();
+                VocabularyValue parsed = parseVocabularyValue(kv.group(2).trim());
                 extra.put("rawKey", key);
-                extra.put("rawValue", value);
-                return new ParsedItem(line, categoryCode, displayMode, key, key, key, value, null,
+                extra.put("rawValue", parsed.answer());
+                extra.putAll(parsed.extraFields());
+                return new ParsedItem(line, categoryCode, displayMode, key, key, key, parsed.answer(), null,
                         distinct(tags), extra, 0.82, warnings);
             }
 
-            Matcher word = WORD_SPACE_MEANING.matcher(line);
+            Matcher word = ENGLISH_WITH_CHINESE_MEANING.matcher(line);
             if (word.matches()) {
-                String title = word.group(1);
-                String answer = word.group(2).trim();
+                String title = word.group(1).trim();
+                VocabularyValue parsed = parseVocabularyValue(word.group(2).trim());
                 extra.put("word", title);
-                extra.put("meaning", answer);
-                return new ParsedItem(line, "WORD", "FLASHCARD", title, title, null, answer, null,
+                extra.put("meaning", parsed.answer());
+                extra.putAll(parsed.extraFields());
+                String parsedType = "SENTENCE".equals(categoryCode) ? "SENTENCE" : "WORD";
+                return new ParsedItem(line, parsedType, "FLASHCARD", title, title, null, parsed.answer(), null,
                         distinct(tags), extra, 0.9, warnings);
             }
         }
@@ -136,7 +141,54 @@ public class InputParseService {
         return tags.stream().filter(s -> s != null && !s.isBlank()).distinct().toList();
     }
 
+    private VocabularyValue parseVocabularyValue(String value) {
+        String[] parts = DETAIL_SPLIT.split(value);
+        String answer = parts.length == 0 ? value.trim() : parts[0].trim();
+        Map<String, Object> extra = new LinkedHashMap<>();
+        for (int i = 1; i < parts.length; i++) {
+            putVocabularyDetail(extra, parts[i]);
+        }
+        return new VocabularyValue(answer, extra);
+    }
+
+    private void mergeVocabularyDetails(Map<String, Object> extra, String value) {
+        String[] parts = DETAIL_SPLIT.split(value);
+        for (String part : parts) {
+            putVocabularyDetail(extra, part);
+        }
+    }
+
+    private void putVocabularyDetail(Map<String, Object> extra, String part) {
+        if (part == null || part.isBlank()) {
+            return;
+        }
+        Matcher matcher = KEY_VALUE.matcher(part.trim());
+        if (!matcher.matches()) {
+            return;
+        }
+        String key = normalizeDetailKey(matcher.group(1).trim());
+        String value = matcher.group(2).trim();
+        if (!key.isBlank() && !value.isBlank()) {
+            extra.put(key, value);
+        }
+    }
+
+    private String normalizeDetailKey(String label) {
+        return switch (label.toLowerCase()) {
+            case "例句", "造句", "句子", "example", "sentence", "example sentence" -> "exampleSentence";
+            case "中文", "例句中文", "句子中文", "翻译", "translation", "sentence translation" -> "exampleTranslation";
+            case "相似词", "近义词", "类似词", "similar", "similar words", "synonym", "synonyms" -> "similarWords";
+            case "反义词", "反义", "antonym", "antonyms", "opposite" -> "antonyms";
+            case "音标", "phonetic", "ipa" -> "phonetic";
+            case "搭配", "常见搭配", "词组", "短语", "phrase", "phrases" -> "phrase";
+            default -> label;
+        };
+    }
+
     private String valueOrDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value;
+    }
+
+    private record VocabularyValue(String answer, Map<String, Object> extraFields) {
     }
 }

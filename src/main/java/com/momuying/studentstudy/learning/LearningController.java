@@ -144,6 +144,7 @@ public class LearningController {
                        i.title LIKE ?
                        OR i.answer LIKE ?
                        OR i.content LIKE ?
+                       OR i.extra_json LIKE ?
                        OR i.source LIKE ?
                        OR i.tags LIKE ?
                        OR s.name LIKE ?
@@ -151,6 +152,7 @@ public class LearningController {
                      )
                     """);
             String like = "%" + keyword.trim() + "%";
+            args.add(like);
             args.add(like);
             args.add(like);
             args.add(like);

@@ -290,6 +290,31 @@ textarea { resize: vertical; line-height: 1.5; }
 .item h3 { margin: 0; font-size: 17px; }
 .meta { color: var(--muted); font-size: 12px; margin-top: 5px; }
 .answer { margin-top: 8px; color: #365a4f; line-height: 1.5; }
+.vocab-details {
+  background: rgba(227, 247, 255, 0.48);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 10px;
+}
+.vocab-details div {
+  display: grid;
+  gap: 3px;
+}
+.vocab-details dt {
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 800;
+}
+.vocab-details dd {
+  color: #365a4f;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .long-text { white-space: pre-wrap; }
 .text-preview {
   border-left-color: var(--brand);

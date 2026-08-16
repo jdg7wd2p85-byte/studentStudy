@@ -49,6 +49,9 @@ public class DataInitializer implements ApplicationRunner {
         insertCategory("GEO_MAP", "地图", "地理", "EXPLANATION", 20);
         insertCategory("GEO_CONCEPT", "概念", "地理", "QA", 21);
         insertCategory("GEO_RECITE", "背诵", "地理", "LONG_TEXT", 22);
+
+        updateCategorySchema("WORD");
+        updateCategorySchema("SENTENCE");
     }
 
     private void insertSubject(String name, int sortOrder) {
@@ -80,11 +83,14 @@ public class DataInitializer implements ApplicationRunner {
 
     private String defaultSchema(String code) {
         return switch (code) {
-            case "WORD" -> """
+            case "WORD", "SENTENCE" -> """
                     {"fields":[
                       {"key":"phonetic","label":"音标","type":"text","required":false},
-                      {"key":"sentence","label":"例句","type":"textarea","required":false},
-                      {"key":"phrase","label":"常见搭配","type":"textarea","required":false}
+                      {"key":"exampleSentence","label":"例句/造句","type":"textarea","required":false},
+                      {"key":"exampleTranslation","label":"例句中文","type":"textarea","required":false},
+                      {"key":"similarWords","label":"相似词/近义词","type":"textarea","required":false},
+                      {"key":"antonyms","label":"反义词","type":"textarea","required":false},
+                      {"key":"phrase","label":"常见搭配/词组","type":"textarea","required":false}
                     ]}
                     """;
             case "FORMULA" -> """
@@ -95,5 +101,12 @@ public class DataInitializer implements ApplicationRunner {
                     """;
             default -> "{\"fields\":[]}";
         };
+    }
+
+    private void updateCategorySchema(String code) {
+        jdbcTemplate.update(
+                "UPDATE item_categories SET field_schema_json = ? WHERE code = ?",
+                defaultSchema(code), code
+        );
     }
 }

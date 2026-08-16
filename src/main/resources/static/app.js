@@ -332,6 +332,7 @@ function renderParsedItem(item) {
         <span class="badge">${Math.round(item.confidence * 100)}%</span>
       </div>
       <div class="answer">${escapeHtml(item.content || item.answer || "待补充答案")}</div>
+      ${renderVocabularyDetails(item)}
       <div class="meta">${escapeHtml(item.rawText)}</div>
       ${item.warnings?.length ? `<div class="meta">${escapeHtml(item.warnings.join("；"))}</div>` : ""}
     </article>
@@ -521,6 +522,7 @@ function renderItemCard(item) {
         <span class="badge">背${Number(item.total_review_count || 0)}次</span>
       </div>
       <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
+      ${renderVocabularyDetails(item)}
       <div class="inline-actions">
         ${isWordItem(item) ? speechButton : ""}
         <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
@@ -569,6 +571,7 @@ function renderReview() {
       <div class="card-label">答案</div>
       <div class="answer">${escapeHtml(item.answer || item.content || "无答案")}</div>
       ${item.explanation ? `<div class="answer">${escapeHtml(item.explanation)}</div>` : ""}
+      ${renderVocabularyDetails(item)}
     </div>
     <div class="rating">
       <button onclick="submitReview(${item.id},0)">不会</button>
@@ -595,6 +598,64 @@ function isWordItem(item) {
     item.categoryCode === "WORD" ||
     item.category_name === "英语单词" ||
     item.category_name === "单词";
+}
+
+function isVocabularyItem(item) {
+  return isWordItem(item) ||
+    item.itemType === "SENTENCE" ||
+    item.item_type === "SENTENCE" ||
+    item.category_code === "SENTENCE" ||
+    item.categoryCode === "SENTENCE" ||
+    item.category_name === "句子/短语" ||
+    item.category_name === "短语" ||
+    item.category_name === "词组";
+}
+
+function renderVocabularyDetails(item) {
+  if (!isVocabularyItem(item)) return "";
+  const extra = itemExtraFields(item);
+  const rows = [
+    detailRow("例句", extra, ["exampleSentence", "sentence", "example"]),
+    detailRow("中文", extra, ["exampleTranslation", "sentenceTranslation", "translation"]),
+    detailRow("相似词", extra, ["similarWords", "synonyms", "synonym"]),
+    detailRow("反义词", extra, ["antonyms", "antonym", "opposite"]),
+    detailRow("常见搭配", extra, ["phrase", "phrases"]),
+    detailRow("音标", extra, ["phonetic", "ipa"])
+  ].filter(Boolean);
+  if (!rows.length) return "";
+  return `<dl class="vocab-details">${rows.join("")}</dl>`;
+}
+
+function detailRow(label, extra, keys) {
+  const value = firstExtraValue(extra, keys);
+  if (!value) return "";
+  return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(formatExtraValue(value))}</dd></div>`;
+}
+
+function firstExtraValue(extra, keys) {
+  for (const key of keys) {
+    if (extra[key] !== undefined && extra[key] !== null && String(extra[key]).trim() !== "") {
+      return extra[key];
+    }
+  }
+  return "";
+}
+
+function formatExtraValue(value) {
+  if (Array.isArray(value)) return value.join("，");
+  return String(value);
+}
+
+function itemExtraFields(item) {
+  if (item.extraFields && typeof item.extraFields === "object") return item.extraFields;
+  const raw = item.extra_json || item.extraJson;
+  if (!raw) return {};
+  if (typeof raw === "object") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
 }
 
 function toggleTextExpand(itemId) {

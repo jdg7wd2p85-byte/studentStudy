@@ -55,6 +55,38 @@ class InputParseServiceTest {
     }
 
     @Test
+    void parsesVocabularyDetails() {
+        List<ParsedItem> items = service.parse(new ParseRequest(
+                1L, 1L, 1L, "WORD",
+                "#英文单词 memory %%记忆%% || 例句: I have a good memory. || 中文: 我记性很好。 || 相似词: recollection || 反义词: forgetfulness",
+                "", ""));
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).answer()).isEqualTo("记忆");
+        assertThat(items.get(0).extraFields())
+                .containsEntry("exampleSentence", "I have a good memory.")
+                .containsEntry("exampleTranslation", "我记性很好。")
+                .containsEntry("similarWords", "recollection")
+                .containsEntry("antonyms", "forgetfulness");
+    }
+
+    @Test
+    void parsesPhraseWithExampleTranslation() {
+        List<ParsedItem> items = service.parse(new ParseRequest(
+                1L, 1L, 2L, "SENTENCE",
+                "look after: 照顾 || 造句: I look after my sister. || 中文: 我照顾妹妹。",
+                "", ""));
+
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).title()).isEqualTo("look after");
+        assertThat(items.get(0).categoryCode()).isEqualTo("SENTENCE");
+        assertThat(items.get(0).answer()).isEqualTo("照顾");
+        assertThat(items.get(0).extraFields())
+                .containsEntry("exampleSentence", "I look after my sister.")
+                .containsEntry("exampleTranslation", "我照顾妹妹。");
+    }
+
+    @Test
     void keepsChineseTextCompleteInsteadOfSplittingByPunctuation() {
         String text = "床前明月光：疑是地上霜。举头望明月，低头思故乡。";
 
