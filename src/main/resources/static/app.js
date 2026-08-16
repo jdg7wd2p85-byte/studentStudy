@@ -495,6 +495,7 @@ function toggleSelectVisible() {
 
 function renderItemCard(item) {
   const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
+  const speechButton = renderSpeechButton(item.title, "读音");
   if (isLongTextItem(item)) {
     const expanded = state.expandedTexts.has(Number(item.id));
     const content = item.content || "";
@@ -520,7 +521,10 @@ function renderItemCard(item) {
         <span class="badge">背${Number(item.total_review_count || 0)}次</span>
       </div>
       <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
-      <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
+      <div class="inline-actions">
+        ${isWordItem(item) ? speechButton : ""}
+        <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
+      </div>
       <div class="meta">${meta}</div>
     </article>
   `;
@@ -557,6 +561,7 @@ function renderReview() {
     <div class="flashcard">
       <div class="card-label">正面</div>
       <div class="card-title">${escapeHtml(item.title)}</div>
+      ${isWordItem(item) ? `<div class="speech-row">${renderSpeechButton(item.title, "读音")}</div>` : ""}
       ${item.prompt ? `<div class="card-prompt">${escapeHtml(item.prompt)}</div>` : ""}
     </div>
     <button class="answer-toggle" onclick="toggleAnswer()">${state.revealAnswer ? "隐藏答案" : "显示答案"}</button>
@@ -581,6 +586,15 @@ function toggleAnswer() {
 
 function isLongTextItem(item) {
   return item.displayMode === "LONG_TEXT" || item.display_mode === "LONG_TEXT";
+}
+
+function isWordItem(item) {
+  return item.itemType === "WORD" ||
+    item.item_type === "WORD" ||
+    item.category_code === "WORD" ||
+    item.categoryCode === "WORD" ||
+    item.category_name === "英语单词" ||
+    item.category_name === "单词";
 }
 
 function toggleTextExpand(itemId) {
@@ -646,11 +660,13 @@ async function makeChoiceQuiz() {
 }
 
 function renderChoiceQuestion(question, index) {
+  const showSpeech = question.direction === "EN_TO_CN" && isLikelyEnglish(question.prompt);
   return `
     <article class="choice-question" data-item-id="${question.itemId}" data-correct="${escapeHtml(question.correctOption)}">
       <div class="choice-head">
         <span class="badge">${index + 1}</span>
         <strong>${escapeHtml(question.prompt)}</strong>
+        ${showSpeech ? renderSpeechButton(question.prompt, "读音") : ""}
       </div>
       <div class="choice-options">
         ${(question.options || []).map((option) => `
@@ -660,6 +676,30 @@ function renderChoiceQuestion(question, index) {
       <div class="choice-result"></div>
     </article>
   `;
+}
+
+function renderSpeechButton(word, label = "读音") {
+  const text = String(word ?? "").trim();
+  if (!text || !isLikelyEnglish(text)) return "";
+  return `<button type="button" class="small-action speech-btn" onclick="speakWord('${escapeJs(text)}')">${escapeHtml(label)}</button>`;
+}
+
+function isLikelyEnglish(value) {
+  const text = String(value ?? "").trim();
+  return /^[A-Za-z][A-Za-z' -]*$/.test(text);
+}
+
+function speakWord(word) {
+  if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+    alert("当前浏览器不支持朗读");
+    return;
+  }
+  const utterance = new SpeechSynthesisUtterance(String(word ?? "").trim());
+  utterance.lang = "en-US";
+  utterance.rate = 0.82;
+  utterance.pitch = 1;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
 }
 
 async function chooseOption(button) {

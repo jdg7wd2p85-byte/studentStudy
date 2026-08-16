@@ -161,6 +161,11 @@ button:active {
   min-height: 34px;
   padding: 0 12px;
 }
+.speech-btn {
+  background: linear-gradient(180deg, #e3f7ff, #dff2de);
+  border-color: var(--line);
+  color: var(--brand-dark);
+}
 
 .panel { display: none; padding: 14px; }
 .panel.active {
@@ -454,6 +459,10 @@ textarea { resize: vertical; line-height: 1.5; }
   color: var(--muted);
   line-height: 1.5;
   margin-top: 12px;
+}
+.speech-row {
+  display: flex;
+  justify-content: center;
 }
 .answer-toggle {
   width: 100%;
