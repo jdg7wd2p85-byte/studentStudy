@@ -14,6 +14,7 @@ const state = {
   itemTotal: 0,
   itemTotalPages: 1,
   itemPageLoading: false,
+  speechSeq: 0,
   reviewIndex: 0,
   revealAnswer: false,
   selected: new Set(),
@@ -24,6 +25,9 @@ const state = {
     items: [],
     index: 0,
     repeat: 0,
+    repeatTotal: 1,
+    intervalMs: 800,
+    label: "朗读",
     timerId: null
   },
   textReader: {
@@ -107,8 +111,10 @@ $("itemsPageSizeSelect").onchange = () => {
   resetItemPageAndLoad();
 };
 $("filterWeakWordsBtn").onclick = filterWeakVocabulary;
-$("playVisibleWordsBtn").onclick = startWordBroadcast;
+$("playVisibleWordsBtn").onclick = () => startWordBroadcast({ repeatTotal: 1, intervalMs: 800, label: "列表朗读" });
+$("dictateVisibleWordsBtn").onclick = () => startWordBroadcast({ repeatTotal: 3, intervalMs: 3000, label: "听写" });
 $("pauseWordBroadcastBtn").onclick = toggleWordBroadcastPause;
+$("stopWordBroadcastBtn").onclick = () => stopWordBroadcast(true);
 $("readerFromVisibleBtn").onclick = () => fillReaderFromItems(state.items);
 $("readerFromSelectedBtn").onclick = () => fillReaderFromItems(state.items.filter((item) => state.selected.has(Number(item.id))));
 $("startTextReaderBtn").onclick = startTextReader;
@@ -121,7 +127,12 @@ $("makeChoiceQuizBtn").onclick = makeChoiceQuiz;
 $("makeChoiceFromListBtn").onclick = makeChoiceQuiz;
 $("paperWeakWordsBtn").onclick = filterWeakWordsForPractice;
 $("paperSelectVisibleBtn").onclick = selectVisibleVocabularyForPractice;
-$("paperPlayWeakWordsBtn").onclick = startWordBroadcast;
+$("paperPlayWeakWordsBtn").onclick = () => startWordBroadcast({
+  repeatTotal: 3,
+  intervalMs: 3000,
+  directionSelectId: "paperWordBroadcastDirectionSelect",
+  label: "错词听写"
+});
 $("choiceDirectionListSelect").onchange = () => {
   $("choiceDirectionSelect").value = $("choiceDirectionListSelect").value;
 };
@@ -906,15 +917,31 @@ function speakText(text, options = {}) {
     alert("当前浏览器不支持朗读");
     return false;
   }
+  const token = ++state.speechSeq;
   const utterance = new SpeechSynthesisUtterance(String(text ?? "").trim());
   utterance.lang = options.lang || detectSpeechLang(text);
   utterance.rate = options.rate || 0.82;
   utterance.pitch = 1;
-  if (options.onend) utterance.onend = options.onend;
-  if (options.onerror) utterance.onerror = options.onerror;
+  if (options.onend) {
+    utterance.onend = () => {
+      if (token === state.speechSeq) options.onend();
+    };
+  }
+  if (options.onerror) {
+    utterance.onerror = () => {
+      if (token === state.speechSeq) options.onerror();
+    };
+  }
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
   return true;
+}
+
+function cancelCurrentSpeech() {
+  state.speechSeq += 1;
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 function detectSpeechLang(text) {
@@ -936,7 +963,7 @@ function fillReaderFromItems(items) {
 function readerLinesForItem(item) {
   const extra = itemExtraFields(item);
   if (isLongTextItem(item)) {
-    return [item.title, item.content || item.answer || ""].filter(Boolean);
+    return [item.content || item.answer || item.title || ""].filter(Boolean);
   }
   if (isVocabularyItem(item)) {
     return [
@@ -1051,7 +1078,7 @@ function stopTextReader(cancelSpeech = true, status = "未开始朗读") {
     timerId: null
   };
   if (cancelSpeech && "speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
+    cancelCurrentSpeech();
   }
   setTextReaderStatus(status);
   updateTextReaderControls();
@@ -1082,12 +1109,15 @@ function updateTextReaderControls() {
   }
 }
 
-function startWordBroadcast() {
+function startWordBroadcast(options = {}) {
+  const directionSelectId = options.directionSelectId || "wordBroadcastDirectionSelect";
+  const direction = $(directionSelectId)?.value === "answer" ? "answer" : "title";
+  const repeatTotal = Math.max(1, Number(options.repeatTotal) || 1);
   const items = state.items
-    .filter((item) => isVocabularyItem(item) && isLikelyEnglish(item.title))
-    .map((item) => ({ id: Number(item.id), title: String(item.title).trim() }));
+    .map((item) => broadcastItemForReader(item, direction))
+    .filter(Boolean);
   if (!items.length) {
-    alert("当前列表没有可播报的英文单词或词组");
+    alert("当前列表没有可播报的内容");
     return;
   }
   stopTextReader(false);
@@ -1098,10 +1128,29 @@ function startWordBroadcast() {
     items,
     index: 0,
     repeat: 0,
+    repeatTotal,
+    intervalMs: Math.max(0, Number(options.intervalMs) || 0),
+    label: options.label || (repeatTotal > 1 ? "听写" : "朗读"),
     timerId: null
   };
   updateWordBroadcastControls();
   playWordBroadcastStep();
+}
+
+function broadcastItemForReader(item, direction) {
+  const title = String(item.title || "").trim();
+  let text = "";
+  if (isVocabularyItem(item)) {
+    text = direction === "answer"
+      ? String(item.answer || item.content || "").trim()
+      : title;
+  } else if (isLongTextItem(item)) {
+    text = String(item.content || item.answer || title).trim();
+  } else {
+    text = String(item.answer || item.content || item.explanation || title).trim();
+  }
+  if (!text) return null;
+  return { id: Number(item.id), title: title || excerpt(text, 18), text };
 }
 
 function playWordBroadcastStep() {
@@ -1112,8 +1161,9 @@ function playWordBroadcastStep() {
     return;
   }
   const item = broadcast.items[broadcast.index];
-  setWordBroadcastStatus(`${broadcast.index + 1}/${broadcast.items.length} ${item.title} · 第 ${broadcast.repeat + 1}/3 遍`);
-  const started = speakText(item.title, {
+  const repeatText = broadcast.repeatTotal > 1 ? ` · 第 ${broadcast.repeat + 1}/${broadcast.repeatTotal} 遍` : "";
+  setWordBroadcastStatus(`${broadcast.label} ${broadcast.index + 1}/${broadcast.items.length} ${item.title}${repeatText}`);
+  const started = speakText(item.text, {
     onend: () => scheduleNextWordBroadcastStep(),
     onerror: () => scheduleNextWordBroadcastStep()
   });
@@ -1126,12 +1176,12 @@ function scheduleNextWordBroadcastStep() {
   const broadcast = state.wordBroadcast;
   if (!broadcast.running || broadcast.paused) return;
   broadcast.repeat += 1;
-  if (broadcast.repeat >= 3) {
+  if (broadcast.repeat >= broadcast.repeatTotal) {
     broadcast.repeat = 0;
     broadcast.index += 1;
   }
   clearTimeout(broadcast.timerId);
-  broadcast.timerId = setTimeout(playWordBroadcastStep, 3000);
+  broadcast.timerId = setTimeout(playWordBroadcastStep, broadcast.intervalMs);
 }
 
 function toggleWordBroadcastPause() {
@@ -1144,7 +1194,7 @@ function toggleWordBroadcastPause() {
     window.speechSynthesis?.pause();
     setWordBroadcastStatus("已暂停");
   } else {
-    window.speechSynthesis?.cancel();
+    cancelCurrentSpeech();
     playWordBroadcastStep();
   }
   updateWordBroadcastControls();
@@ -1159,10 +1209,13 @@ function stopWordBroadcast(cancelSpeech = true, status = "未开始播报") {
     items: [],
     index: 0,
     repeat: 0,
+    repeatTotal: 1,
+    intervalMs: 800,
+    label: "朗读",
     timerId: null
   };
-  if (cancelSpeech && "speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
+  if (cancelSpeech) {
+    cancelCurrentSpeech();
   }
   setWordBroadcastStatus(status);
   updateWordBroadcastControls();
@@ -1183,6 +1236,9 @@ function updateWordBroadcastControls() {
   if ($("pauseWordBroadcastBtn")) {
     $("pauseWordBroadcastBtn").disabled = !broadcast.running;
     $("pauseWordBroadcastBtn").textContent = broadcast.paused ? "继续" : "暂停";
+  }
+  if ($("stopWordBroadcastBtn")) {
+    $("stopWordBroadcastBtn").disabled = !broadcast.running;
   }
 }
 

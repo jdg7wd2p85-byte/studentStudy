@@ -118,8 +118,14 @@ apple 苹果"></div>
     </div>
     <div class="broadcast-bar">
       <button id="filterWeakWordsBtn">筛错误词</button>
-      <button id="playVisibleWordsBtn" class="primary">播报当前列表</button>
+      <select id="wordBroadcastDirectionSelect">
+        <option value="title">读英文</option>
+        <option value="answer">读中文</option>
+      </select>
+      <button id="playVisibleWordsBtn">朗读当前列表</button>
+      <button id="dictateVisibleWordsBtn" class="primary">听写当前列表</button>
       <button id="pauseWordBroadcastBtn">暂停</button>
+      <button id="stopWordBroadcastBtn">停止</button>
       <span id="wordBroadcastStatus">未开始播报</span>
     </div>
     <div class="pagination-bar" aria-label="学习项分页">
@@ -157,7 +163,11 @@ apple 苹果"></div>
     <div class="paper-filter-bar">
       <button id="paperWeakWordsBtn">筛错误单词</button>
       <button id="paperSelectVisibleBtn">全选本页错词</button>
-      <button id="paperPlayWeakWordsBtn">播报错词</button>
+      <select id="paperWordBroadcastDirectionSelect">
+        <option value="title">读英文</option>
+        <option value="answer">读中文</option>
+      </select>
+      <button id="paperPlayWeakWordsBtn">听写错词</button>
       <span id="paperFilterStatus">可先筛错误单词，再生成选择题</span>
     </div>
     <div class="actions paper-actions">
