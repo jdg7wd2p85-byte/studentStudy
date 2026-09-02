@@ -81,37 +81,31 @@ public class ReportController {
                 """ + todayChildFilter, todayArgs.toArray());
 
         List<Map<String, Object>> statusBuckets = jdbcTemplate.queryForList("""
-                SELECT 'forgot' AS status_key, '不会' AS status_name, COUNT(*) AS item_count
-                FROM learning_items i
-                JOIN review_records r ON r.id = (
-                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
-                )
-                WHERE i.status <> 'ARCHIVED' AND r.rating = 0
-                """ + childFilter + """
-                UNION ALL
-                SELECT 'vague', '模糊', COUNT(*)
-                FROM learning_items i
-                JOIN review_records r ON r.id = (
-                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
-                )
-                WHERE i.status <> 'ARCHIVED' AND r.rating = 1
-                """ + childFilter + """
-                UNION ALL
-                SELECT 'ok', '基本会', COUNT(*)
-                FROM learning_items i
-                JOIN review_records r ON r.id = (
-                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
-                )
-                WHERE i.status <> 'ARCHIVED' AND r.rating = 2
-                """ + childFilter + """
-                UNION ALL
-                SELECT 'fluent', '熟练', COUNT(*)
-                FROM learning_items i
-                JOIN review_records r ON r.id = (
-                  SELECT rr.id FROM review_records rr WHERE rr.item_id = i.id ORDER BY rr.reviewed_at DESC, rr.id DESC LIMIT 1
-                )
-                WHERE i.status <> 'ARCHIVED' AND r.rating = 3
-                """ + childFilter, repeatArgs(args, 4));
+                SELECT
+                  bucket.status_key,
+                  bucket.status_name,
+                  COUNT(latest.item_id) AS item_count
+                FROM (
+                  SELECT 0 AS rating, 'forgot' AS status_key, '不会' AS status_name
+                  UNION ALL SELECT 1, 'vague', '模糊'
+                  UNION ALL SELECT 2, 'ok', '基本会'
+                  UNION ALL SELECT 3, 'fluent', '熟练'
+                ) bucket
+                LEFT JOIN (
+                  SELECT i.id AS item_id, r.rating
+                  FROM learning_items i
+                  JOIN (
+                    SELECT rr.item_id, MAX(rr.id) AS latest_id
+                    FROM review_records rr
+                    GROUP BY rr.item_id
+                  ) latest_record ON latest_record.item_id = i.id
+                  JOIN review_records r ON r.id = latest_record.latest_id
+                  WHERE i.status <> 'ARCHIVED'
+                  """ + childFilter + """
+                ) latest ON latest.rating = bucket.rating
+                GROUP BY bucket.rating, bucket.status_key, bucket.status_name
+                ORDER BY bucket.rating
+                """, args.toArray());
 
         List<Map<String, Object>> modules = jdbcTemplate.queryForList("""
                 SELECT
@@ -363,11 +357,4 @@ public class ReportController {
         return ApiResponse.ok(rows);
     }
 
-    private Object[] repeatArgs(List<Object> args, int times) {
-        List<Object> repeated = new ArrayList<>();
-        for (int i = 0; i < times; i++) {
-            repeated.addAll(args);
-        }
-        return repeated.toArray();
-    }
 }
