@@ -29,7 +29,7 @@ public class ReportController {
         List<Object> args = new ArrayList<>();
         String childFilter = "";
         if (childId != null) {
-            childFilter = " AND i.child_id = ?";
+            childFilter = " AND i.child_id = ? ";
             args.add(childId);
         }
 
@@ -48,7 +48,7 @@ public class ReportController {
         dueArgs.add(Timestamp.valueOf(LocalDateTime.now().plusDays(1).toLocalDate().atStartOfDay()));
         String dueChildFilter = "";
         if (childId != null) {
-            dueChildFilter = " AND i.child_id = ?";
+            dueChildFilter = " AND i.child_id = ? ";
             dueArgs.add(childId);
         }
         Long dueToday = jdbcTemplate.queryForObject("""
@@ -63,7 +63,7 @@ public class ReportController {
         todayArgs.add(Timestamp.valueOf(LocalDateTime.now().plusDays(1).toLocalDate().atStartOfDay()));
         String todayChildFilter = "";
         if (childId != null) {
-            todayChildFilter = " AND r.child_id = ?";
+            todayChildFilter = " AND r.child_id = ? ";
             todayArgs.add(childId);
         }
         Map<String, Object> todayReview = jdbcTemplate.queryForMap("""
@@ -129,7 +129,7 @@ public class ReportController {
         dailyArgs.add(Timestamp.valueOf(LocalDateTime.now().minusDays(59).toLocalDate().atStartOfDay()));
         String dailyChildFilter = "";
         if (childId != null) {
-            dailyChildFilter = " AND r.child_id = ?";
+            dailyChildFilter = " AND r.child_id = ? ";
             dailyArgs.add(childId);
         }
         List<Map<String, Object>> dailyTrend = jdbcTemplate.queryForList("""
