@@ -166,6 +166,11 @@ button:active {
   border-color: var(--line);
   color: var(--brand-dark);
 }
+.read-btn {
+  background: linear-gradient(180deg, #fff8d8, #e3f7ff);
+  border-color: var(--line);
+  color: var(--brand-dark);
+}
 
 .panel { display: none; padding: 14px; }
 .panel.active {

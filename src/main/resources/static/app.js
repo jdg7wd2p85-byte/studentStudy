@@ -538,6 +538,7 @@ function renderItemCard(item) {
   const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
   const speechButton = renderSpeechButton(item.title, "读音");
   const exampleButton = renderExampleSpeechButton(item, "读例句");
+  const itemReadButton = renderItemReadButton(item);
   if (isLongTextItem(item)) {
     const expanded = state.expandedTexts.has(Number(item.id));
     const content = item.content || "";
@@ -549,6 +550,7 @@ function renderItemCard(item) {
         </div>
         <div class="text-excerpt ${expanded ? "expanded" : ""}">${escapeHtml(expanded ? content : excerpt(content))}</div>
         <div class="inline-actions">
+          ${itemReadButton}
           <button class="small-action" onclick="toggleTextExpand(${item.id})">${expanded ? "收起全文" : "展开全文"}</button>
           <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
         </div>
@@ -565,6 +567,7 @@ function renderItemCard(item) {
       <div class="answer">${escapeHtml(item.answer || item.content || "")}</div>
       ${renderVocabularyDetails(item)}
       <div class="inline-actions">
+        ${itemReadButton}
         ${isWordItem(item) ? speechButton : ""}
         ${exampleButton}
         <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
@@ -591,6 +594,7 @@ function renderReview() {
         <h3>${escapeHtml(item.title)}</h3>
         <div class="text-body">${escapeHtml(item.content || item.title || "")}</div>
       </div>
+      <div class="inline-actions">${renderItemReadButton(item)}</div>
       <div class="rating">
         <button onclick="submitReview(${item.id},0)">没读熟</button>
         <button onclick="submitReview(${item.id},1)">不流畅</button>
@@ -605,7 +609,7 @@ function renderReview() {
     <div class="flashcard">
       <div class="card-label">正面</div>
       <div class="card-title">${escapeHtml(item.title)}</div>
-      ${isWordItem(item) ? `<div class="speech-row">${renderSpeechButton(item.title, "读音")}</div>` : ""}
+      <div class="speech-row">${renderItemReadButton(item)} ${isWordItem(item) ? renderSpeechButton(item.title, "读音") : ""}</div>
       ${item.prompt ? `<div class="card-prompt">${escapeHtml(item.prompt)}</div>` : ""}
     </div>
     <button class="answer-toggle" onclick="toggleAnswer()">${state.revealAnswer ? "隐藏答案" : "显示答案"}</button>
@@ -673,6 +677,12 @@ function renderExampleSpeechButton(item, label = "读例句") {
   const sentence = firstExtraValue(itemExtraFields(item), ["exampleSentence", "sentence", "example"]);
   if (!sentence || !isLikelyEnglish(sentence)) return "";
   return renderSpeechButton(sentence, label);
+}
+
+function renderItemReadButton(item) {
+  const text = readerLinesForItem(item).filter(Boolean).join("\n");
+  if (!text) return "";
+  return `<button type="button" class="small-action read-btn" onclick="readItemText(decodeURIComponent('${encodeURIComponent(text)}'))">朗读</button>`;
 }
 
 function detailRow(label, extra, keys) {
@@ -805,6 +815,11 @@ function speakWord(word) {
   speakText(word);
 }
 
+function readItemText(text) {
+  stopWordBroadcast(false);
+  startReaderSegments(splitReaderText(text));
+}
+
 function speakText(text, options = {}) {
   if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
     alert("当前浏览器不支持朗读");
@@ -872,6 +887,14 @@ function startTextReader() {
   const segments = splitReaderText($("readerTextInput").value);
   if (!segments.length) {
     alert("请先输入或生成朗读文本");
+    return;
+  }
+  startReaderSegments(segments);
+}
+
+function startReaderSegments(segments) {
+  if (!segments.length) {
+    alert("没有可朗读的内容");
     return;
   }
   stopWordBroadcast(false);
