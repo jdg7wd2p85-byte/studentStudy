@@ -99,12 +99,12 @@ public class InputParseService {
     }
 
     private boolean isLanguageCard(String categoryCode) {
-        return "WORD".equals(categoryCode) || "SENTENCE".equals(categoryCode);
+        return "WORD".equals(categoryCode) || "SENTENCE".equals(categoryCode) || "PHRASE".equals(categoryCode);
     }
 
     private String displayModeFor(String categoryCode) {
         return switch (categoryCode) {
-            case "WORD", "SENTENCE" -> "FLASHCARD";
+            case "WORD", "SENTENCE", "PHRASE" -> "FLASHCARD";
             case "TEXT" -> "LONG_TEXT";
             case "FORMULA" -> "FORMULA";
             case "WRONG_QUESTION" -> "EXPLANATION";

@@ -28,30 +28,38 @@ public class DataInitializer implements ApplicationRunner {
         }
 
         insertCategory("WORD", "单词", "英语", "FLASHCARD", 1);
-        insertCategory("SENTENCE", "句子/短语", "英语", "FLASHCARD", 2);
-        insertCategory("EN_GRAMMAR", "语法", "英语", "QA", 3);
-        insertCategory("EN_WRITING", "作文", "英语", "LONG_TEXT", 4);
-        insertCategory("TEXT", "课文/古诗", "语文", "LONG_TEXT", 5);
-        insertCategory("CN_RECITE", "背诵", "语文", "LONG_TEXT", 6);
-        insertCategory("CN_WORD", "生词", "语文", "FLASHCARD", 7);
-        insertCategory("THEOREM", "数学定理", "数学", "QA", 8);
-        insertCategory("MATH_FORMULA", "公式", "数学", "FORMULA", 9);
-        insertCategory("KNOWLEDGE", "知识点", "数学", "QA", 10);
-        insertCategory("WRONG_QUESTION", "错题", "数学", "EXPLANATION", 11);
-        insertCategory("FORMULA", "物理公式", "物理", "FORMULA", 12);
-        insertCategory("PHYSICS_EXPERIMENT", "实验", "物理", "EXPLANATION", 13);
-        insertCategory("CHEM_EQUATION", "方程式", "化学", "FORMULA", 14);
-        insertCategory("CHEM_EXPERIMENT", "实验", "化学", "EXPLANATION", 15);
-        insertCategory("CHEM_CONCEPT", "概念", "化学", "QA", 16);
-        insertCategory("BIO_CONCEPT", "概念", "生物", "QA", 17);
-        insertCategory("BIO_DIAGRAM", "图示", "生物", "EXPLANATION", 18);
-        insertCategory("BIO_RECITE", "背诵", "生物", "LONG_TEXT", 19);
-        insertCategory("GEO_MAP", "地图", "地理", "EXPLANATION", 20);
-        insertCategory("GEO_CONCEPT", "概念", "地理", "QA", 21);
-        insertCategory("GEO_RECITE", "背诵", "地理", "LONG_TEXT", 22);
+        insertCategory("PHRASE", "词组", "英语", "FLASHCARD", 2);
+        insertCategory("SENTENCE", "句子/短语", "英语", "FLASHCARD", 3);
+        insertCategory("EN_GRAMMAR", "语法", "英语", "QA", 4);
+        insertCategory("EN_WRITING", "作文", "英语", "LONG_TEXT", 5);
+        insertCategory("TEXT", "课文/古诗", "语文", "LONG_TEXT", 6);
+        insertCategory("CN_RECITE", "背诵", "语文", "LONG_TEXT", 7);
+        insertCategory("CN_WORD", "生词", "语文", "FLASHCARD", 8);
+        insertCategory("THEOREM", "数学定理", "数学", "QA", 9);
+        insertCategory("MATH_FORMULA", "公式", "数学", "FORMULA", 10);
+        insertCategory("KNOWLEDGE", "知识点", "数学", "QA", 11);
+        insertCategory("WRONG_QUESTION", "错题", "数学", "EXPLANATION", 12);
+        insertCategory("FORMULA", "物理公式", "物理", "FORMULA", 13);
+        insertCategory("PHYSICS_EXPERIMENT", "实验", "物理", "EXPLANATION", 14);
+        insertCategory("CHEM_EQUATION", "方程式", "化学", "FORMULA", 15);
+        insertCategory("CHEM_EXPERIMENT", "实验", "化学", "EXPLANATION", 16);
+        insertCategory("CHEM_CONCEPT", "概念", "化学", "QA", 17);
+        insertCategory("BIO_CONCEPT", "概念", "生物", "QA", 18);
+        insertCategory("BIO_DIAGRAM", "图示", "生物", "EXPLANATION", 19);
+        insertCategory("BIO_RECITE", "背诵", "生物", "LONG_TEXT", 20);
+        insertCategory("GEO_MAP", "地图", "地理", "EXPLANATION", 21);
+        insertCategory("GEO_CONCEPT", "概念", "地理", "QA", 22);
+        insertCategory("GEO_RECITE", "背诵", "地理", "LONG_TEXT", 23);
 
         updateCategorySchema("WORD");
         updateCategorySchema("SENTENCE");
+        updateCategorySchema("PHRASE");
+        updateCategoryOrder("WORD", 1);
+        updateCategoryOrder("PHRASE", 2);
+        updateCategoryOrder("SENTENCE", 3);
+        updateCategoryOrder("EN_GRAMMAR", 4);
+        updateCategoryOrder("EN_WRITING", 5);
+        migrateImportedPhrases();
     }
 
     private void insertSubject(String name, int sortOrder) {
@@ -83,7 +91,7 @@ public class DataInitializer implements ApplicationRunner {
 
     private String defaultSchema(String code) {
         return switch (code) {
-            case "WORD", "SENTENCE" -> """
+            case "WORD", "SENTENCE", "PHRASE" -> """
                     {"fields":[
                       {"key":"phonetic","label":"音标","type":"text","required":false},
                       {"key":"exampleSentence","label":"例句/造句","type":"textarea","required":false},
@@ -108,5 +116,20 @@ public class DataInitializer implements ApplicationRunner {
                 "UPDATE item_categories SET field_schema_json = ? WHERE code = ?",
                 defaultSchema(code), code
         );
+    }
+
+    private void updateCategoryOrder(String code, int sortOrder) {
+        jdbcTemplate.update("UPDATE item_categories SET sort_order = ? WHERE code = ?", sortOrder, code);
+    }
+
+    private void migrateImportedPhrases() {
+        jdbcTemplate.update("""
+                UPDATE learning_items
+                SET category_id = (SELECT id FROM item_categories WHERE code = 'PHRASE'),
+                    item_type = 'PHRASE'
+                WHERE category_id = (SELECT id FROM item_categories WHERE code = 'SENTENCE')
+                  AND tags LIKE '%英文词组%'
+                  AND status <> 'ARCHIVED'
+                """);
     }
 }

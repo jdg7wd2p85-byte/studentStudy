@@ -73,7 +73,7 @@ public class ReportController {
                   COALESCE(SUM(CASE WHEN r.rating = 1 THEN 1 ELSE 0 END), 0) AS vague_count,
                   COALESCE(SUM(CASE WHEN r.rating = 2 THEN 1 ELSE 0 END), 0) AS ok_count,
                   COALESCE(SUM(CASE WHEN r.rating = 3 THEN 1 ELSE 0 END), 0) AS fluent_count,
-                  COUNT(DISTINCT CASE WHEN r.after_mastery_score >= 90 THEN r.item_id END) AS mastered_count
+                  COUNT(DISTINCT CASE WHEN r.rating = 3 THEN r.item_id END) AS mastered_count
                 FROM review_records r
                 WHERE r.reviewed_at >= ?
                   AND r.reviewed_at < ?
@@ -142,7 +142,7 @@ public class ReportController {
                   DATE(r.reviewed_at) AS review_date,
                   COUNT(*) AS review_count,
                   COUNT(DISTINCT r.item_id) AS item_count,
-                  COUNT(DISTINCT CASE WHEN r.after_mastery_score >= 90 THEN r.item_id END) AS mastered_count
+                  COUNT(DISTINCT CASE WHEN r.rating = 3 THEN r.item_id END) AS mastered_count
                 FROM review_records r
                 JOIN learning_items i ON i.id = r.item_id
                 WHERE i.status <> 'ARCHIVED'
@@ -205,7 +205,7 @@ public class ReportController {
                   COALESCE(SUM(CASE WHEN r.rating = 1 THEN 1 ELSE 0 END), 0) AS vague_count,
                   COALESCE(SUM(CASE WHEN r.rating = 2 THEN 1 ELSE 0 END), 0) AS ok_count,
                   COALESCE(SUM(CASE WHEN r.rating = 3 THEN 1 ELSE 0 END), 0) AS fluent_count,
-                  COUNT(DISTINCT CASE WHEN r.after_mastery_score >= 90 THEN r.item_id END) AS mastered_count
+                  COUNT(DISTINCT CASE WHEN r.rating = 3 THEN r.item_id END) AS mastered_count
                 FROM review_records r
                 JOIN learning_items i ON i.id = r.item_id
                 WHERE i.status <> 'ARCHIVED'
@@ -219,7 +219,7 @@ public class ReportController {
                   c.name AS category_name,
                   COUNT(DISTINCT r.item_id) AS item_count,
                   COUNT(*) AS review_count,
-                  COUNT(DISTINCT CASE WHEN r.after_mastery_score >= 90 THEN r.item_id END) AS mastered_count
+                  COUNT(DISTINCT CASE WHEN r.rating = 3 THEN r.item_id END) AS mastered_count
                 FROM review_records r
                 JOIN learning_items i ON i.id = r.item_id
                 JOIN subjects s ON s.id = i.subject_id

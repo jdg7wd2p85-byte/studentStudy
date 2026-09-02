@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api")
@@ -326,18 +327,36 @@ public class LearningController {
     }
 
     private Long findDuplicateId(Long childId, Long categoryId, String title, String answer) {
-        List<Long> ids = jdbcTemplate.queryForList("""
-                SELECT id
+        String normalizedTitle = normalizeLearningText(title);
+        String normalizedAnswer = normalizeLearningText(answer);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
+                SELECT id, title, answer
                 FROM learning_items
                 WHERE child_id = ?
                   AND category_id = ?
-                  AND LOWER(title) = LOWER(?)
-                  AND COALESCE(answer, '') = COALESCE(?, '')
                   AND status <> 'ARCHIVED'
                 ORDER BY id ASC
-                LIMIT 1
-                """, Long.class, childId, categoryId, title, answer);
-        return ids.isEmpty() ? null : ids.get(0);
+                """, childId, categoryId);
+        for (Map<String, Object> row : rows) {
+            if (Objects.equals(normalizedTitle, normalizeLearningText(row.get("title")))
+                    && Objects.equals(normalizedAnswer, normalizeLearningText(row.get("answer")))) {
+                return ((Number) row.get("id")).longValue();
+            }
+        }
+        return null;
+    }
+
+    private String normalizeLearningText(Object value) {
+        return String.valueOf(value == null ? "" : value)
+                .trim()
+                .replace('’', '\'')
+                .replace('‘', '\'')
+                .replace('；', ';')
+                .replace('，', ',')
+                .replace('。', '.')
+                .replaceAll("\\s*/\\s*", "/")
+                .replaceAll("\\s+", " ")
+                .toLowerCase();
     }
 
     private String categoryCode(Long categoryId) {

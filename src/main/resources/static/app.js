@@ -37,6 +37,8 @@ const state = {
     segments: [],
     index: 0,
     repeat: 0,
+    repeatTotal: 1,
+    intervalMs: 0,
     timerId: null
   },
   rocket: {
@@ -604,7 +606,6 @@ function toggleSelectVisible() {
 
 function renderItemCard(item) {
   const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
-  const speechButton = renderSpeechButton(item.title, "读音");
   const exampleButton = renderExampleSpeechButton(item, "读例句");
   const itemReadButton = renderItemReadButton(item);
   const recordingActions = renderRecordingActions(item);
@@ -638,7 +639,6 @@ function renderItemCard(item) {
       ${renderVocabularyDetails(item)}
       <div class="inline-actions">
         ${itemReadButton}
-        ${isWordItem(item) ? speechButton : ""}
         ${exampleButton}
         ${recordingActions}
         <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
@@ -680,7 +680,7 @@ function renderReview() {
     <div class="flashcard">
       <div class="card-label">正面</div>
       <div class="card-title">${escapeHtml(item.title)}</div>
-      <div class="speech-row">${renderItemReadButton(item)} ${isWordItem(item) ? renderSpeechButton(item.title, "读音") : ""}</div>
+      <div class="speech-row">${renderItemReadButton(item)}</div>
       ${item.prompt ? `<div class="card-prompt">${escapeHtml(item.prompt)}</div>` : ""}
     </div>
     <button class="answer-toggle" onclick="toggleAnswer()">${state.revealAnswer ? "隐藏答案" : "显示答案"}</button>
@@ -723,8 +723,12 @@ function isVocabularyItem(item) {
   return isWordItem(item) ||
     item.itemType === "SENTENCE" ||
     item.item_type === "SENTENCE" ||
+    item.itemType === "PHRASE" ||
+    item.item_type === "PHRASE" ||
     item.category_code === "SENTENCE" ||
     item.categoryCode === "SENTENCE" ||
+    item.category_code === "PHRASE" ||
+    item.categoryCode === "PHRASE" ||
     item.category_name === "句子/短语" ||
     item.category_name === "短语" ||
     item.category_name === "词组";
@@ -752,9 +756,21 @@ function renderExampleSpeechButton(item, label = "读例句") {
 }
 
 function renderItemReadButton(item) {
+  if (isVocabularyItem(item)) {
+    return [
+      renderReadAction("读英文", item.title),
+      renderReadAction("读中文", item.answer || item.content || "")
+    ].filter(Boolean).join(" ");
+  }
   const text = readerLinesForItem(item).filter(Boolean).join("\n");
   if (!text) return "";
-  return `<button type="button" class="small-action read-btn" onclick="readItemText(decodeURIComponent('${encodeURIComponent(text)}'))">朗读</button>`;
+  return renderReadAction(isLongTextItem(item) ? "朗读正文" : "朗读", text);
+}
+
+function renderReadAction(label, text) {
+  const value = String(text ?? "").trim();
+  if (!value) return "";
+  return `<button type="button" class="small-action read-btn" onclick="readItemText(decodeURIComponent('${encodeURIComponent(value)}'), 1, 0)">${escapeHtml(label)}</button>`;
 }
 
 function renderRecordingActions(item) {
@@ -929,9 +945,9 @@ function speakWord(word) {
   speakText(word);
 }
 
-function readItemText(text) {
+function readItemText(text, repeatTotal = 1, intervalMs = 0) {
   stopWordBroadcast(false);
-  startReaderSegments(splitReaderText(text));
+  startReaderSegments(splitReaderText(text), { repeatTotal, intervalMs });
 }
 
 function speakText(text, options = {}) {
@@ -1022,19 +1038,23 @@ function startTextReader() {
   startReaderSegments(segments);
 }
 
-function startReaderSegments(segments) {
+function startReaderSegments(segments, options = {}) {
   if (!segments.length) {
     alert("没有可朗读的内容");
     return;
   }
   stopWordBroadcast(false);
   stopTextReader(false);
+  const repeatTotal = options.repeatTotal ?? readerRepeatTotal();
+  const intervalMs = options.intervalMs ?? readerIntervalMs();
   state.textReader = {
     running: true,
     paused: false,
     segments,
     index: 0,
     repeat: 0,
+    repeatTotal: Math.max(1, Math.min(10, Number(repeatTotal) || 1)),
+    intervalMs: Math.max(0, Number(intervalMs) || 0),
     timerId: null
   };
   updateTextReaderControls();
@@ -1048,7 +1068,7 @@ function playTextReaderStep() {
     stopTextReader(false, "朗读完成");
     return;
   }
-  const repeatTotal = readerRepeatTotal();
+  const repeatTotal = reader.repeatTotal || 1;
   const segment = reader.segments[reader.index];
   setTextReaderStatus(`${reader.index + 1}/${reader.segments.length} · 第 ${reader.repeat + 1}/${repeatTotal} 遍：${excerpt(segment, 36)}`);
   const started = speakText(segment, {
@@ -1064,12 +1084,12 @@ function scheduleNextTextReaderStep() {
   const reader = state.textReader;
   if (!reader.running || reader.paused) return;
   reader.repeat += 1;
-  if (reader.repeat >= readerRepeatTotal()) {
+  if (reader.repeat >= (reader.repeatTotal || 1)) {
     reader.repeat = 0;
     reader.index += 1;
   }
   clearTimeout(reader.timerId);
-  reader.timerId = setTimeout(playTextReaderStep, readerIntervalMs());
+  reader.timerId = setTimeout(playTextReaderStep, reader.intervalMs || 0);
 }
 
 function toggleTextReaderPause() {
@@ -1082,7 +1102,7 @@ function toggleTextReaderPause() {
     window.speechSynthesis?.pause();
     setTextReaderStatus("已暂停");
   } else {
-    window.speechSynthesis?.cancel();
+    cancelCurrentSpeech();
     playTextReaderStep();
   }
   updateTextReaderControls();
@@ -1097,6 +1117,8 @@ function stopTextReader(cancelSpeech = true, status = "未开始朗读") {
     segments: [],
     index: 0,
     repeat: 0,
+    repeatTotal: 1,
+    intervalMs: 0,
     timerId: null
   };
   if (cancelSpeech && "speechSynthesis" in window) {
