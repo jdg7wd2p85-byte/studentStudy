@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260816-2">
+  <link rel="stylesheet" href="/styles.css?v=20260902-1">
 </head>
 <body>
 <header class="app-header">
@@ -86,6 +86,12 @@ apple 苹果"></div>
       <label><input type="checkbox" value="vague"> 模糊</label>
       <label><input type="checkbox" value="ok"> 基本会</label>
       <label><input type="checkbox" value="fluent"> 熟练</label>
+    </div>
+    <div class="broadcast-bar">
+      <button id="filterWeakWordsBtn">筛错误词</button>
+      <button id="playVisibleWordsBtn" class="primary">播报当前列表</button>
+      <button id="pauseWordBroadcastBtn">暂停</button>
+      <span id="wordBroadcastStatus">未开始播报</span>
     </div>
     <div class="pagination-bar" aria-label="学习项分页">
       <button id="previousItemsPageBtn">上一页</button>
@@ -268,6 +274,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260816-2"></script>
+<script src="/app.js?v=20260902-1"></script>
 </body>
 </html>

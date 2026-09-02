@@ -18,6 +18,14 @@ const state = {
   revealAnswer: false,
   selected: new Set(),
   expandedTexts: new Set(),
+  wordBroadcast: {
+    running: false,
+    paused: false,
+    items: [],
+    index: 0,
+    repeat: 0,
+    timerId: null
+  },
   rocket: {
     running: false,
     stage: 1,
@@ -89,6 +97,9 @@ $("itemsPageSizeSelect").onchange = () => {
   state.itemPageSize = Number($("itemsPageSizeSelect").value) || 50;
   resetItemPageAndLoad();
 };
+$("filterWeakWordsBtn").onclick = filterWeakVocabulary;
+$("playVisibleWordsBtn").onclick = startWordBroadcast;
+$("pauseWordBroadcastBtn").onclick = toggleWordBroadcastPause;
 $("selectVisibleBtn").onclick = toggleSelectVisible;
 $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
@@ -449,6 +460,19 @@ function resetFilters() {
   resetItemPageAndLoad();
 }
 
+function filterWeakVocabulary() {
+  const english = state.catalog?.subjects?.find((subject) => subject.name === "英语");
+  $("keywordInput").value = "";
+  $("subjectFilterSelect").value = english ? String(english.id) : "";
+  renderCategoryFilter();
+  $("categoryFilterSelect").value = "";
+  $("tagFilterInput").value = "";
+  document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
+    input.checked = input.value === "forgot" || input.value === "vague";
+  });
+  resetItemPageAndLoad();
+}
+
 async function loadToday() {
   state.today = await api("/api/reviews/today");
   state.reviewIndex = 0;
@@ -474,6 +498,7 @@ function renderItems() {
     };
   });
   updateSelectionBar();
+  updateWordBroadcastControls();
 }
 
 function visibleItemIds() {
@@ -497,6 +522,7 @@ function toggleSelectVisible() {
 function renderItemCard(item) {
   const meta = `${escapeHtml(item.category_name)} / ${escapeHtml(item.subject_name)} / 录入 ${formatDate(item.first_learned_at)} / 掌握分 ${item.mastery_score} / 下次 ${formatDate(item.next_review_at)}`;
   const speechButton = renderSpeechButton(item.title, "读音");
+  const exampleButton = renderExampleSpeechButton(item, "读例句");
   if (isLongTextItem(item)) {
     const expanded = state.expandedTexts.has(Number(item.id));
     const content = item.content || "";
@@ -525,6 +551,7 @@ function renderItemCard(item) {
       ${renderVocabularyDetails(item)}
       <div class="inline-actions">
         ${isWordItem(item) ? speechButton : ""}
+        ${exampleButton}
         <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
       </div>
       <div class="meta">${meta}</div>
@@ -572,6 +599,7 @@ function renderReview() {
       <div class="answer">${escapeHtml(item.answer || item.content || "无答案")}</div>
       ${item.explanation ? `<div class="answer">${escapeHtml(item.explanation)}</div>` : ""}
       ${renderVocabularyDetails(item)}
+      ${renderExampleSpeechButton(item, "读例句")}
     </div>
     <div class="rating">
       <button onclick="submitReview(${item.id},0)">不会</button>
@@ -624,6 +652,12 @@ function renderVocabularyDetails(item) {
   ].filter(Boolean);
   if (!rows.length) return "";
   return `<dl class="vocab-details">${rows.join("")}</dl>`;
+}
+
+function renderExampleSpeechButton(item, label = "读例句") {
+  const sentence = firstExtraValue(itemExtraFields(item), ["exampleSentence", "sentence", "example"]);
+  if (!sentence || !isLikelyEnglish(sentence)) return "";
+  return renderSpeechButton(sentence, label);
 }
 
 function detailRow(label, extra, keys) {
@@ -751,16 +785,127 @@ function isLikelyEnglish(value) {
 }
 
 function speakWord(word) {
+  stopWordBroadcast(false);
+  speakText(word);
+}
+
+function speakText(text, options = {}) {
   if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
     alert("当前浏览器不支持朗读");
-    return;
+    return false;
   }
-  const utterance = new SpeechSynthesisUtterance(String(word ?? "").trim());
+  const utterance = new SpeechSynthesisUtterance(String(text ?? "").trim());
   utterance.lang = "en-US";
-  utterance.rate = 0.82;
+  utterance.rate = options.rate || 0.82;
   utterance.pitch = 1;
+  if (options.onend) utterance.onend = options.onend;
+  if (options.onerror) utterance.onerror = options.onerror;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
+  return true;
+}
+
+function startWordBroadcast() {
+  const items = state.items
+    .filter((item) => isVocabularyItem(item) && isLikelyEnglish(item.title))
+    .map((item) => ({ id: Number(item.id), title: String(item.title).trim() }));
+  if (!items.length) {
+    alert("当前列表没有可播报的英文单词或词组");
+    return;
+  }
+  stopWordBroadcast(false);
+  state.wordBroadcast = {
+    running: true,
+    paused: false,
+    items,
+    index: 0,
+    repeat: 0,
+    timerId: null
+  };
+  updateWordBroadcastControls();
+  playWordBroadcastStep();
+}
+
+function playWordBroadcastStep() {
+  const broadcast = state.wordBroadcast;
+  if (!broadcast.running || broadcast.paused) return;
+  if (broadcast.index >= broadcast.items.length) {
+    stopWordBroadcast(false, "播报完成");
+    return;
+  }
+  const item = broadcast.items[broadcast.index];
+  setWordBroadcastStatus(`${broadcast.index + 1}/${broadcast.items.length} ${item.title} · 第 ${broadcast.repeat + 1}/3 遍`);
+  const started = speakText(item.title, {
+    onend: () => scheduleNextWordBroadcastStep(),
+    onerror: () => scheduleNextWordBroadcastStep()
+  });
+  if (!started) {
+    stopWordBroadcast(false, "当前浏览器不支持朗读");
+  }
+}
+
+function scheduleNextWordBroadcastStep() {
+  const broadcast = state.wordBroadcast;
+  if (!broadcast.running || broadcast.paused) return;
+  broadcast.repeat += 1;
+  if (broadcast.repeat >= 3) {
+    broadcast.repeat = 0;
+    broadcast.index += 1;
+  }
+  clearTimeout(broadcast.timerId);
+  broadcast.timerId = setTimeout(playWordBroadcastStep, 3000);
+}
+
+function toggleWordBroadcastPause() {
+  const broadcast = state.wordBroadcast;
+  if (!broadcast.running) return;
+  broadcast.paused = !broadcast.paused;
+  clearTimeout(broadcast.timerId);
+  broadcast.timerId = null;
+  if (broadcast.paused) {
+    window.speechSynthesis?.pause();
+    setWordBroadcastStatus("已暂停");
+  } else {
+    window.speechSynthesis?.cancel();
+    playWordBroadcastStep();
+  }
+  updateWordBroadcastControls();
+}
+
+function stopWordBroadcast(cancelSpeech = true, status = "未开始播报") {
+  const timerId = state.wordBroadcast?.timerId;
+  if (timerId) clearTimeout(timerId);
+  state.wordBroadcast = {
+    running: false,
+    paused: false,
+    items: [],
+    index: 0,
+    repeat: 0,
+    timerId: null
+  };
+  if (cancelSpeech && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+  setWordBroadcastStatus(status);
+  updateWordBroadcastControls();
+}
+
+function setWordBroadcastStatus(status) {
+  if ($("wordBroadcastStatus")) {
+    $("wordBroadcastStatus").textContent = status;
+  }
+}
+
+function updateWordBroadcastControls() {
+  const broadcast = state.wordBroadcast;
+  const playableCount = state.items.filter((item) => isVocabularyItem(item) && isLikelyEnglish(item.title)).length;
+  if ($("playVisibleWordsBtn")) {
+    $("playVisibleWordsBtn").disabled = playableCount === 0;
+  }
+  if ($("pauseWordBroadcastBtn")) {
+    $("pauseWordBroadcastBtn").disabled = !broadcast.running;
+    $("pauseWordBroadcastBtn").textContent = broadcast.paused ? "继续" : "暂停";
+  }
 }
 
 async function chooseOption(button) {
