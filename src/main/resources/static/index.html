@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260902-1">
+  <link rel="stylesheet" href="/styles.css?v=20260902-2">
 </head>
 <body>
 <header class="app-header">
@@ -30,6 +30,7 @@
     <button class="active" data-tab="home">菜单</button>
     <button data-tab="input">录入</button>
     <button data-tab="review">复习</button>
+    <button data-tab="reader">朗读</button>
     <button data-tab="items">列表</button>
     <button data-tab="paper">出题</button>
     <button data-tab="report">报告</button>
@@ -69,6 +70,34 @@ apple 苹果"></div>
 
   <section id="review" class="panel">
     <div id="reviewCard" class="review-card empty">暂无待复习内容</div>
+  </section>
+
+  <section id="reader" class="panel">
+    <div class="reader-toolbar">
+      <button id="readerFromVisibleBtn">用当前列表</button>
+      <button id="readerFromSelectedBtn">用已选项目</button>
+      <label>重复
+        <select id="readerRepeatSelect">
+          <option value="1">1 遍</option>
+          <option value="2">2 遍</option>
+          <option value="3" selected>3 遍</option>
+        </select>
+      </label>
+      <label>间隔
+        <select id="readerIntervalSelect">
+          <option value="1">1 秒</option>
+          <option value="3" selected>3 秒</option>
+          <option value="5">5 秒</option>
+        </select>
+      </label>
+    </div>
+    <textarea id="readerTextInput" class="reader-text" rows="10" placeholder="可以粘贴语文课文、英语单词、词组、例句。朗读会按行和句子自动分段。"></textarea>
+    <div class="reader-actions">
+      <button id="startTextReaderBtn" class="primary">开始朗读</button>
+      <button id="pauseTextReaderBtn">暂停</button>
+      <button id="stopTextReaderBtn">停止</button>
+    </div>
+    <div id="textReaderStatus" class="reader-status">未开始朗读</div>
   </section>
 
   <section id="items" class="panel">
@@ -274,6 +303,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260902-1"></script>
+<script src="/app.js?v=20260902-2"></script>
 </body>
 </html>

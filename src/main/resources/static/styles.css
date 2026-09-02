@@ -508,6 +508,37 @@ textarea { resize: vertical; line-height: 1.5; }
   display: flex;
   justify-content: center;
 }
+.reader-toolbar,
+.reader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.reader-toolbar label {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 6px;
+}
+.reader-toolbar select {
+  min-height: 38px;
+  width: auto;
+}
+.reader-text {
+  min-height: 240px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.reader-status {
+  background: rgba(227, 247, 255, 0.58);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--brand-dark);
+  font-weight: 800;
+  line-height: 1.5;
+  padding: 10px;
+}
 .answer-toggle {
   width: 100%;
   background: var(--sun);
@@ -970,6 +1001,18 @@ summary { cursor: pointer; font-weight: 700; color: var(--brand-dark); }
   .pagination-bar strong { order: -1; width: 100%; }
   .selection-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .selection-actions select { width: 100%; }
+  .reader-toolbar,
+  .reader-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .reader-toolbar label {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .reader-text {
+    min-height: 280px;
+  }
   .rating { grid-template-columns: 1fr 1fr; }
   .summary { gap: 8px; }
   .summary div { padding: 11px 8px; }
