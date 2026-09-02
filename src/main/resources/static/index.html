@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260902-4">
+  <link rel="stylesheet" href="/styles.css?v=20260902-5">
 </head>
 <body>
 <header class="app-header">
@@ -154,6 +154,12 @@ apple 苹果"></div>
 
   <section id="paper" class="panel">
     <p class="hint">从列表勾选学习项，生成练习卷或单词选择题。</p>
+    <div class="paper-filter-bar">
+      <button id="paperWeakWordsBtn">筛错误单词</button>
+      <button id="paperSelectVisibleBtn">全选本页错词</button>
+      <button id="paperPlayWeakWordsBtn">播报错词</button>
+      <span id="paperFilterStatus">可先筛错误单词，再生成选择题</span>
+    </div>
     <div class="actions paper-actions">
       <button id="makePaperBtn" class="primary">生成练习卷</button>
       <select id="choiceDirectionSelect">
@@ -303,6 +309,6 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260902-4"></script>
+<script src="/app.js?v=20260902-5"></script>
 </body>
 </html>

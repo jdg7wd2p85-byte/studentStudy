@@ -119,6 +119,9 @@ $("makePaperBtn").onclick = makePaper;
 $("makePaperFromListBtn").onclick = makePaper;
 $("makeChoiceQuizBtn").onclick = makeChoiceQuiz;
 $("makeChoiceFromListBtn").onclick = makeChoiceQuiz;
+$("paperWeakWordsBtn").onclick = filterWeakWordsForPractice;
+$("paperSelectVisibleBtn").onclick = selectVisibleVocabularyForPractice;
+$("paperPlayWeakWordsBtn").onclick = startWordBroadcast;
 $("choiceDirectionListSelect").onchange = () => {
   $("choiceDirectionSelect").value = $("choiceDirectionListSelect").value;
 };
@@ -476,16 +479,51 @@ function resetFilters() {
 }
 
 function filterWeakVocabulary() {
+  setWeakWordFilters();
+  resetItemPageAndLoad();
+}
+
+async function filterWeakWordsForPractice() {
+  setWeakWordFilters();
+  showTab("items");
+  await loadItems();
+  setPaperFilterStatus(`已筛出 ${state.itemTotal} 个错误英语词汇，本页 ${state.items.length} 个`);
+}
+
+function setWeakWordFilters() {
   const english = state.catalog?.subjects?.find((subject) => subject.name === "英语");
   $("keywordInput").value = "";
   $("subjectFilterSelect").value = english ? String(english.id) : "";
   renderCategoryFilter();
-  $("categoryFilterSelect").value = "";
+  const wordCategory = state.catalog?.categories?.find((category) =>
+    category.code === "WORD" || category.name === "单词"
+  );
+  $("categoryFilterSelect").value = wordCategory ? String(wordCategory.id) : "";
   $("tagFilterInput").value = "";
   document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
     input.checked = input.value === "forgot" || input.value === "vague";
   });
-  resetItemPageAndLoad();
+  state.itemPage = 1;
+}
+
+function selectVisibleVocabularyForPractice() {
+  const ids = state.items
+    .filter((item) => isVocabularyItem(item))
+    .map((item) => Number(item.id))
+    .filter((id) => Number.isFinite(id));
+  if (!ids.length) {
+    alert("当前页没有可选的英语词汇，请先筛错误单词");
+    return;
+  }
+  ids.forEach((id) => state.selected.add(id));
+  renderItems();
+  setPaperFilterStatus(`已选本页 ${ids.length} 个错误词，可生成选择题`);
+}
+
+function setPaperFilterStatus(message) {
+  if ($("paperFilterStatus")) {
+    $("paperFilterStatus").textContent = message;
+  }
 }
 
 async function loadToday() {
@@ -1268,6 +1306,15 @@ function updateSelectionBar() {
   }
   if ($("makeChoiceFromListBtn")) {
     $("makeChoiceFromListBtn").disabled = count === 0;
+  }
+  if ($("paperSelectVisibleBtn")) {
+    $("paperSelectVisibleBtn").disabled = state.items.length === 0;
+  }
+  if ($("paperPlayWeakWordsBtn")) {
+    $("paperPlayWeakWordsBtn").disabled = state.items.filter((item) => isVocabularyItem(item) && isLikelyEnglish(item.title)).length === 0;
+  }
+  if ($("paperFilterStatus") && state.itemTotal > 0) {
+    $("paperFilterStatus").textContent = `当前筛选共 ${state.itemTotal} 项，本页 ${state.items.length} 项，已选 ${count} 项`;
   }
   if ($("deleteSelectedBtn")) {
     $("deleteSelectedBtn").disabled = count === 0;
