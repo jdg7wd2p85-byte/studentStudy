@@ -539,6 +539,7 @@ function renderItemCard(item) {
   const speechButton = renderSpeechButton(item.title, "读音");
   const exampleButton = renderExampleSpeechButton(item, "读例句");
   const itemReadButton = renderItemReadButton(item);
+  const recordingActions = renderRecordingActions(item);
   if (isLongTextItem(item)) {
     const expanded = state.expandedTexts.has(Number(item.id));
     const content = item.content || "";
@@ -552,6 +553,7 @@ function renderItemCard(item) {
         <div class="inline-actions">
           ${itemReadButton}
           <button class="small-action" onclick="toggleTextExpand(${item.id})">${expanded ? "收起全文" : "展开全文"}</button>
+          ${recordingActions}
           <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
         </div>
         <div class="meta">${meta}</div>
@@ -570,6 +572,7 @@ function renderItemCard(item) {
         ${itemReadButton}
         ${isWordItem(item) ? speechButton : ""}
         ${exampleButton}
+        ${recordingActions}
         <button class="small-action" onclick="viewItemHistory(${item.id})">记录</button>
       </div>
       <div class="meta">${meta}</div>
@@ -594,7 +597,7 @@ function renderReview() {
         <h3>${escapeHtml(item.title)}</h3>
         <div class="text-body">${escapeHtml(item.content || item.title || "")}</div>
       </div>
-      <div class="inline-actions">${renderItemReadButton(item)}</div>
+      <div class="inline-actions">${renderItemReadButton(item)} ${renderRecordingActions(item)}</div>
       <div class="rating">
         <button onclick="submitReview(${item.id},0)">没读熟</button>
         <button onclick="submitReview(${item.id},1)">不流畅</button>
@@ -619,6 +622,7 @@ function renderReview() {
       ${item.explanation ? `<div class="answer">${escapeHtml(item.explanation)}</div>` : ""}
       ${renderVocabularyDetails(item)}
       ${renderExampleSpeechButton(item, "读例句")}
+      <div class="inline-actions">${renderRecordingActions(item)}</div>
     </div>
     <div class="rating">
       <button onclick="submitReview(${item.id},0)">不会</button>
@@ -685,6 +689,18 @@ function renderItemReadButton(item) {
   return `<button type="button" class="small-action read-btn" onclick="readItemText(decodeURIComponent('${encodeURIComponent(text)}'))">朗读</button>`;
 }
 
+function renderRecordingActions(item) {
+  const extra = itemExtraFields(item);
+  const url = firstExtraValue(extra, ["recordingUrl", "recordUrl", "audioUrl"]);
+  const buttons = [
+    `<button type="button" class="small-action recording-btn" onclick="saveRecordingLink(${Number(item.id)})">${url ? "改录音" : "贴录音"}</button>`
+  ];
+  if (url) {
+    buttons.unshift(`<button type="button" class="small-action recording-link-btn" onclick="openExternalLink(decodeURIComponent('${encodeURIComponent(String(url))}'))">打开录音</button>`);
+  }
+  return buttons.join("");
+}
+
 function detailRow(label, extra, keys) {
   const value = firstExtraValue(extra, keys);
   if (!value) return "";
@@ -715,6 +731,33 @@ function itemExtraFields(item) {
   } catch {
     return {};
   }
+}
+
+async function saveRecordingLink(itemId) {
+  const item = state.items.find((row) => Number(row.id) === Number(itemId)) || state.today.find((row) => Number(row.id) === Number(itemId));
+  const extra = item ? itemExtraFields(item) : {};
+  const currentUrl = firstExtraValue(extra, ["recordingUrl", "recordUrl", "audioUrl"]);
+  const url = prompt("粘贴跟读录音链接。留空可以清除已有链接。", currentUrl || "");
+  if (url === null) return;
+  const updated = await api(`/api/items/${itemId}/recording`, {
+    method: "POST",
+    body: JSON.stringify({ url: url.trim(), note: "" })
+  });
+  replaceItemInState(updated);
+  renderItems();
+  renderReview();
+  alert(url.trim() ? "录音链接已保存" : "录音链接已清除");
+}
+
+function replaceItemInState(item) {
+  const id = Number(item.id);
+  state.items = state.items.map((row) => Number(row.id) === id ? item : row);
+  state.today = state.today.map((row) => Number(row.id) === id ? item : row);
+}
+
+function openExternalLink(url) {
+  if (!url) return;
+  window.open(url, "_blank", "noopener");
 }
 
 function toggleTextExpand(itemId) {

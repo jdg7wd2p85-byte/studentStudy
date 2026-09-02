@@ -171,6 +171,12 @@ button:active {
   border-color: var(--line);
   color: var(--brand-dark);
 }
+.recording-btn,
+.recording-link-btn {
+  background: linear-gradient(180deg, #fbe9df, #fff8d8);
+  border-color: var(--line);
+  color: var(--brand-dark);
+}
 
 .panel { display: none; padding: 14px; }
 .panel.active {

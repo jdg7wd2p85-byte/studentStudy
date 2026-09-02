@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -105,6 +106,27 @@ public class LearningController {
                   )
                 """, ids.toArray());
         return ApiResponse.ok(Map.of("deleted", deleted));
+    }
+
+    @PostMapping("/items/{itemId}/recording")
+    public ApiResponse<Map<String, Object>> saveRecording(@PathVariable Long itemId, @RequestBody RecordingLinkRequest request)
+            throws JsonProcessingException {
+        Map<String, Object> before = item(itemId);
+        Map<String, Object> extra = parseExtraJson(before.get("extra_json"));
+        String url = blankToNull(request.url());
+        if (url == null) {
+            extra.remove("recordingUrl");
+        } else {
+            extra.put("recordingUrl", url);
+        }
+        String note = blankToNull(request.note());
+        if (note == null) {
+            extra.remove("recordingNote");
+        } else {
+            extra.put("recordingNote", note);
+        }
+        jdbcTemplate.update("UPDATE learning_items SET extra_json = ? WHERE id = ?", toJson(extra), itemId);
+        return ApiResponse.ok(item(itemId));
     }
 
     @GetMapping("/items/page")
@@ -341,6 +363,15 @@ public class LearningController {
         return objectMapper.writeValueAsString(value);
     }
 
+    private Map<String, Object> parseExtraJson(Object value) throws JsonProcessingException {
+        if (value == null || String.valueOf(value).isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> parsed = objectMapper.readValue(String.valueOf(value), Map.class);
+        return new LinkedHashMap<>(parsed);
+    }
+
     private String required(String value, String message) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(message);
@@ -354,5 +385,8 @@ public class LearningController {
 
     private String valueOrDefault(String value, String defaultValue) {
         return value == null || value.isBlank() ? defaultValue : value;
+    }
+
+    public record RecordingLinkRequest(String url, String note) {
     }
 }
