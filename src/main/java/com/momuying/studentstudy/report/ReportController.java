@@ -11,6 +11,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -170,15 +171,15 @@ public class ReportController {
                 ORDER BY review_date DESC, item_count DESC, review_count DESC
                 """, dailyArgs.toArray());
 
-        return ApiResponse.ok(Map.of(
-                "overview", overview,
-                "dueToday", dueToday == null ? 0 : dueToday,
-                "todayReview", todayReview,
-                "statusBuckets", statusBuckets,
-                "modules", modules,
-                "dailyTrend", dailyTrend,
-                "dailyCategories", dailyCategories
-        ));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("overview", overview);
+        response.put("dueToday", dueToday == null ? 0 : dueToday);
+        response.put("todayReview", todayReview);
+        response.put("statusBuckets", statusBuckets);
+        response.put("modules", modules);
+        response.put("dailyTrend", dailyTrend);
+        response.put("dailyCategories", dailyCategories);
+        return ApiResponse.ok(response);
     }
 
     @GetMapping("/daily")
@@ -309,14 +310,14 @@ public class ReportController {
                 ORDER BY w.sort_order, w.planned_start_time, w.id
                 """, scheduleArgs.toArray());
 
-        return ApiResponse.ok(Map.of(
-                "date", date,
-                "reviewSummary", reviewSummary,
-                "categorySummary", categorySummary,
-                "reviews", reviews,
-                "scheduleSummary", scheduleSummary,
-                "scheduleItems", scheduleItems
-        ));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("date", date);
+        response.put("reviewSummary", reviewSummary);
+        response.put("categorySummary", categorySummary);
+        response.put("reviews", reviews);
+        response.put("scheduleSummary", scheduleSummary);
+        response.put("scheduleItems", scheduleItems);
+        return ApiResponse.ok(response);
     }
 
     @GetMapping("/reviews")
