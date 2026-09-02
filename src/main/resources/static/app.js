@@ -14,6 +14,7 @@ const state = {
   itemTotal: 0,
   itemTotalPages: 1,
   itemPageLoading: false,
+  choiceWrongOnly: false,
   speechSeq: 0,
   reviewIndex: 0,
   revealAnswer: false,
@@ -127,12 +128,7 @@ $("makeChoiceQuizBtn").onclick = makeChoiceQuiz;
 $("makeChoiceFromListBtn").onclick = makeChoiceQuiz;
 $("paperWeakWordsBtn").onclick = filterWeakWordsForPractice;
 $("paperSelectVisibleBtn").onclick = selectVisibleVocabularyForPractice;
-$("paperPlayWeakWordsBtn").onclick = () => startWordBroadcast({
-  repeatTotal: 3,
-  intervalMs: 3000,
-  directionSelectId: "paperWordBroadcastDirectionSelect",
-  label: "错词听写"
-});
+$("paperPlayWeakWordsBtn").onclick = startChoiceWrongBroadcast;
 $("choiceDirectionListSelect").onchange = () => {
   $("choiceDirectionSelect").value = $("choiceDirectionListSelect").value;
 };
@@ -494,11 +490,34 @@ function filterWeakVocabulary() {
   resetItemPageAndLoad();
 }
 
-async function filterWeakWordsForPractice() {
-  setWeakWordFilters();
-  showTab("items");
-  await loadItems();
-  setPaperFilterStatus(`已筛出 ${state.itemTotal} 个错误英语词汇，本页 ${state.items.length} 个`);
+function filterWeakWordsForPractice() {
+  const questions = [...document.querySelectorAll("#paperPreview .choice-question")];
+  if (!questions.length) {
+    alert("请先生成选择题，再筛本页错题");
+    setPaperFilterStatus("请先生成选择题，再筛本页答错的题");
+    return;
+  }
+  if (state.choiceWrongOnly) {
+    questions.forEach((question) => {
+      question.hidden = false;
+    });
+    state.choiceWrongOnly = false;
+    $("paperWeakWordsBtn").textContent = "只看本页错题";
+    setPaperFilterStatus(`已显示全部 ${questions.length} 道选择题`);
+    return;
+  }
+  const answered = questions.filter((question) => question.dataset.result);
+  const wrong = questions.filter((question) => question.dataset.result === "wrong");
+  if (!answered.length) {
+    setPaperFilterStatus("还没有作答，答完后再筛本页错题");
+    return;
+  }
+  questions.forEach((question) => {
+    question.hidden = question.dataset.result !== "wrong";
+  });
+  state.choiceWrongOnly = true;
+  $("paperWeakWordsBtn").textContent = "显示全部题";
+  setPaperFilterStatus(`本页已答 ${answered.length} 道，答错 ${wrong.length} 道`);
 }
 
 function setWeakWordFilters() {
@@ -864,17 +883,20 @@ async function makeChoiceQuiz() {
     method: "POST",
     body: JSON.stringify({ itemIds, direction })
   });
+  state.choiceWrongOnly = false;
   showTab("paper");
+  $("paperWeakWordsBtn").textContent = "只看本页错题";
   $("paperPreview").innerHTML = `
     <h3>${direction === "CN_TO_EN" ? "中文选英文" : "英文选中文"}</h3>
     ${questions.map(renderChoiceQuestion).join("")}
   `;
+  setPaperFilterStatus(`已生成 ${questions.length} 道选择题，作答后可只看本页错题`);
 }
 
 function renderChoiceQuestion(question, index) {
   const showSpeech = question.direction === "EN_TO_CN" && isLikelyEnglish(question.prompt);
   return `
-    <article class="choice-question" data-item-id="${question.itemId}" data-correct="${escapeHtml(question.correctOption)}">
+    <article class="choice-question" data-item-id="${question.itemId}" data-direction="${escapeHtml(question.direction)}" data-prompt="${escapeHtml(question.prompt)}" data-correct="${escapeHtml(question.correctOption)}">
       <div class="choice-head">
         <span class="badge">${index + 1}</span>
         <strong>${escapeHtml(question.prompt)}</strong>
@@ -1153,6 +1175,50 @@ function broadcastItemForReader(item, direction) {
   return { id: Number(item.id), title: title || excerpt(text, 18), text };
 }
 
+function startChoiceWrongBroadcast() {
+  const questions = [...document.querySelectorAll("#paperPreview .choice-question")]
+    .filter((question) => question.dataset.result === "wrong");
+  if (!questions.length) {
+    alert("当前选择题还没有答错的题");
+    setPaperFilterStatus("当前选择题还没有答错的题");
+    return;
+  }
+  const readEnglish = $("paperWordBroadcastDirectionSelect")?.value !== "answer";
+  const items = questions.map((question) => {
+    const direction = question.dataset.direction;
+    const prompt = question.dataset.prompt || "";
+    const correct = question.dataset.correct || "";
+    const text = readEnglish
+      ? (direction === "CN_TO_EN" ? correct : prompt)
+      : (direction === "CN_TO_EN" ? prompt : correct);
+    return {
+      id: Number(question.dataset.itemId),
+      title: prompt,
+      text: String(text || prompt || correct).trim()
+    };
+  }).filter((item) => item.text);
+  if (!items.length) {
+    alert("当前错题没有可播报的内容");
+    return;
+  }
+  stopTextReader(false);
+  stopWordBroadcast(false);
+  state.wordBroadcast = {
+    running: true,
+    paused: false,
+    items,
+    index: 0,
+    repeat: 0,
+    repeatTotal: 3,
+    intervalMs: 3000,
+    label: "错题听写",
+    timerId: null
+  };
+  updateWordBroadcastControls();
+  setPaperFilterStatus(`开始听写本页 ${items.length} 道错题`);
+  playWordBroadcastStep();
+}
+
 function playWordBroadcastStep() {
   const broadcast = state.wordBroadcast;
   if (!broadcast.running || broadcast.paused) return;
@@ -1249,6 +1315,7 @@ async function chooseOption(button) {
   const chosen = button.textContent;
   const correct = chosen === correctOption;
   const result = question.querySelector(".choice-result");
+  question.dataset.result = correct ? "correct" : "wrong";
   question.querySelectorAll(".choice-options button").forEach((option) => {
     option.disabled = true;
     if (option.textContent === correctOption) option.classList.add("correct");
