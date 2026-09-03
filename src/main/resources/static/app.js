@@ -57,6 +57,32 @@ const state = {
   }
 };
 
+const IMAGE_PARSE_PROMPT = `请从我上传的图片中提取英语词组表格内容，整理成可导入学习网站的结构化数据。
+
+要求：
+1. 只提取图片中清晰可见的英文词组和中文释义。
+2. 每一行输出一个对象，字段为：
+   - title：英文词组
+   - answer：中文释义
+   - subject：英语
+   - category：词组
+   - tags：英文词组, 中考词组, 图片导入
+3. 保留英文里的 sb., sth., ..., /, 括号等形式。
+4. 中文释义保持原意，不要擅自扩写。
+5. 如果同一个英文词组重复出现，只保留一条；如果释义完全相同也只保留一条。
+6. 输出 JSON 数组，不要输出解释文字。
+
+输出格式示例：
+[
+  {
+    "title": "fall in love with",
+    "answer": "爱上",
+    "subject": "英语",
+    "category": "词组",
+    "tags": ["英文词组", "中考词组", "图片导入"]
+  }
+]`;
+
 const $ = (id) => document.getElementById(id);
 
 const studyMenus = [
@@ -105,6 +131,7 @@ $("scheduleModal").onclick = (event) => {
 };
 $("parseBtn").onclick = parseInput;
 $("saveParsedBtn").onclick = saveParsed;
+$("copyImagePromptBtn").onclick = copyImageParsePrompt;
 $("searchBtn").onclick = resetItemPageAndLoad;
 $("resetFiltersBtn").onclick = resetFilters;
 $("previousItemsPageBtn").onclick = () => changeItemPage(-1);
@@ -417,6 +444,15 @@ function syncPasteBoxToRawText() {
 function setRawText(value) {
   $("rawText").value = value;
   $("pasteBox").textContent = value;
+}
+
+async function copyImageParsePrompt() {
+  try {
+    await navigator.clipboard.writeText(IMAGE_PARSE_PROMPT);
+    alert("图片解析提示词已复制");
+  } catch (error) {
+    window.prompt("浏览器不允许自动复制，请长按/全选复制下面内容", IMAGE_PARSE_PROMPT);
+  }
 }
 
 async function loadItems() {
