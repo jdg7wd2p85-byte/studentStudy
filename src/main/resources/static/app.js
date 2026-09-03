@@ -15,6 +15,7 @@ const state = {
   itemTotalPages: 1,
   itemPageLoading: false,
   choiceWrongOnly: false,
+  restoringUrl: false,
   speechSeq: 0,
   reviewIndex: 0,
   revealAnswer: false,
@@ -116,10 +117,7 @@ const routeMenus = {
 
 document.querySelectorAll(".tabs button").forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
-    btn.classList.add("active");
-    $(btn.dataset.tab).classList.add("active");
+    showTab(btn.dataset.tab);
   });
 });
 
@@ -142,6 +140,7 @@ $("saveParsedBtn").onclick = saveParsed;
 $("copyImagePromptBtn").onclick = copyImageParsePrompt;
 $("searchBtn").onclick = resetItemPageAndLoad;
 $("resetFiltersBtn").onclick = resetFilters;
+$("copyCurrentUrlBtn").onclick = copyCurrentUrl;
 $("previousItemsPageBtn").onclick = () => changeItemPage(-1);
 $("nextItemsPageBtn").onclick = () => changeItemPage(1);
 $("itemsPageSizeSelect").onchange = () => {
@@ -193,6 +192,7 @@ $("stageRocketBtn").onclick = separateStage;
 $("recoverRocketBtn").onclick = recoverRocket;
 $("resetRocketBtn").onclick = resetRocket;
 window.addEventListener("hashchange", handleRoute);
+window.addEventListener("popstate", handleRoute);
 $("categorySelect").addEventListener("change", () => {
   syncSubjectWithCategory();
   syncListFilterWithCategory();
@@ -230,12 +230,12 @@ async function loadAll() {
   state.catalog = await api("/api/catalog");
   renderCatalog();
   initializeDates();
+  applyUrlState();
   updateTextReaderControls();
   await Promise.all([loadItems(), loadToday(), loadReport(), loadDailyAnalysis(), loadWeekSchedule()]);
   await migrateLocalDreams();
   await loadDreams();
   resetRocket();
-  handleRoute();
 }
 
 function renderCatalog() {
@@ -351,6 +351,12 @@ function syncListFilterWithCategory() {
 }
 
 function openStudyMenu(subjectName, categoryName) {
+  applyStudyMenuFilter(subjectName, categoryName);
+  showTab(categoryName === "火箭游戏" ? "rocket" : "items");
+  if (categoryName !== "火箭游戏") resetItemPageAndLoad();
+}
+
+function applyStudyMenuFilter(subjectName, categoryName) {
   const subject = state.catalog.subjects.find((row) => row.name === subjectName);
   if (subject) {
     $("subjectFilterSelect").value = String(subject.id);
@@ -366,11 +372,17 @@ function openStudyMenu(subjectName, categoryName) {
   document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
     input.checked = false;
   });
-  showTab(categoryName === "火箭游戏" ? "rocket" : "items");
-  if (categoryName !== "火箭游戏") resetItemPageAndLoad();
+  state.itemPage = 1;
 }
 
 function handleRoute() {
+  if (!state.catalog) return;
+  const params = new URLSearchParams(window.location.search);
+  if ([...params.keys()].length) {
+    applyUrlState();
+    loadItems();
+    return;
+  }
   const route = routeMenus[window.location.hash];
   if (!route || !state.catalog) return;
   if (route.tab) {
@@ -481,6 +493,17 @@ async function copyImageParsePrompt() {
   }
 }
 
+async function copyCurrentUrl() {
+  updateUrlFromState();
+  const url = window.location.href;
+  try {
+    await navigator.clipboard.writeText(url);
+    alert("当前筛选链接已复制");
+  } catch (error) {
+    window.prompt("浏览器不允许自动复制，请长按/全选复制下面链接", url);
+  }
+}
+
 async function loadItems() {
   const requestSeq = ++state.itemRequestSeq;
   const params = new URLSearchParams();
@@ -502,10 +525,12 @@ async function loadItems() {
   renderItems();
   renderItemsPagination();
   updateSelectionBar();
+  updateUrlFromState();
 }
 
 function resetItemPageAndLoad() {
   state.itemPage = 1;
+  updateUrlFromState();
   loadItems();
 }
 
@@ -519,6 +544,7 @@ async function changeItemPage(offset) {
   renderItemsPagination();
   try {
     await loadItems();
+    updateUrlFromState();
   } catch (error) {
     state.itemPage = previousPage;
     alert(`第 ${nextPage} 页加载失败：${error.message || "请稍后重试"}`);
@@ -1468,6 +1494,107 @@ function viewSelectedHistory() {
 function showTab(tabId) {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tabId));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === tabId));
+  updateUrlFromState();
+}
+
+function activeTabId() {
+  return document.querySelector(".panel.active")?.id || "home";
+}
+
+function updateUrlFromState() {
+  if (state.restoringUrl || !state.catalog) return;
+  const tab = activeTabId();
+  const params = new URLSearchParams();
+  params.set("tab", tab);
+  if (tab === "items") {
+    const subject = selectedFilterSubject();
+    const category = selectedFilterCategory();
+    if (subject) params.set("subject", subject.name);
+    if (category) params.set("category", category.name);
+    if ($("keywordInput")?.value.trim()) params.set("keyword", $("keywordInput").value.trim());
+    if ($("tagFilterInput")?.value.trim()) params.set("tag", $("tagFilterInput").value.trim());
+    const statuses = selectedStatuses();
+    if (statuses.length) params.set("status", statuses.join(","));
+    if (state.itemPage > 1) params.set("page", String(state.itemPage));
+    if (state.itemPageSize !== 50) params.set("pageSize", String(state.itemPageSize));
+  }
+  const nextUrl = `${window.location.pathname}?${params.toString()}`;
+  if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
+    window.history.replaceState(null, "", nextUrl);
+  }
+}
+
+function applyUrlState() {
+  if (!state.catalog) return;
+  state.restoringUrl = true;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const route = routeMenus[window.location.hash];
+    const tab = params.get("tab") || route?.tab || (route ? "items" : activeTabId());
+    if (route?.subject || route?.category) {
+      applyStudyMenuFilter(route.subject, route.category);
+    }
+    applyListFilterFromUrl(params);
+    if (params.has("page")) {
+      state.itemPage = Math.max(1, Number(params.get("page")) || 1);
+    }
+    if (params.has("pageSize")) {
+      state.itemPageSize = Math.max(1, Number(params.get("pageSize")) || 50);
+      $("itemsPageSizeSelect").value = String(state.itemPageSize);
+    }
+    showTab(tab || "home");
+  } finally {
+    state.restoringUrl = false;
+  }
+}
+
+function applyListFilterFromUrl(params) {
+  if (!params.has("subject") && !params.has("subjectId") && !params.has("category") && !params.has("categoryId")
+      && !params.has("keyword") && !params.has("tag") && !params.has("status")) {
+    return;
+  }
+  const subject = findSubjectFromParam(params.get("subjectId"), params.get("subject"));
+  $("subjectFilterSelect").value = subject ? String(subject.id) : "";
+  renderCategoryFilter();
+  const category = findCategoryFromParam(params.get("categoryId"), params.get("category"), subject);
+  $("categoryFilterSelect").value = category ? String(category.id) : "";
+  $("keywordInput").value = params.get("keyword") || "";
+  $("tagFilterInput").value = params.get("tag") || "";
+  const statuses = new Set(String(params.get("status") || "").split(",").map((item) => item.trim()).filter(Boolean));
+  document.querySelectorAll("#statusFilters input[type=checkbox]").forEach((input) => {
+    input.checked = statuses.has(input.value);
+  });
+}
+
+function selectedFilterSubject() {
+  const id = Number($("subjectFilterSelect")?.value);
+  return state.catalog.subjects.find((subject) => Number(subject.id) === id);
+}
+
+function selectedFilterCategory() {
+  const id = Number($("categoryFilterSelect")?.value);
+  return state.catalog.categories.find((category) => Number(category.id) === id);
+}
+
+function findSubjectFromParam(id, name) {
+  if (id) {
+    const byId = state.catalog.subjects.find((subject) => String(subject.id) === String(id));
+    if (byId) return byId;
+  }
+  if (!name) return null;
+  return state.catalog.subjects.find((subject) => subject.name === name);
+}
+
+function findCategoryFromParam(id, name, subject) {
+  const categories = state.catalog.categories.filter((category) =>
+    !subject || String(category.subject_id || "") === String(subject.id)
+  );
+  if (id) {
+    const byId = categories.find((category) => String(category.id) === String(id));
+    if (byId) return byId;
+  }
+  if (!name) return null;
+  return categories.find((category) => category.name === name || category.name.includes(name) || name.includes(category.name));
 }
 
 function selectedCategory() {
