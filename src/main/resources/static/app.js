@@ -87,7 +87,7 @@ const $ = (id) => document.getElementById(id);
 
 const studyMenus = [
   { subject: "语文", items: ["背诵", "生词", "课文/古诗"] },
-  { subject: "英语", items: ["单词", "语法", "作文"] },
+  { subject: "英语", items: ["单词", "词组", "句子/短语", "语法", "作文"] },
   { subject: "数学", items: ["定理", "公式", "错题"] },
   { subject: "物理", items: ["公式", "实验", "火箭游戏"] },
   { subject: "化学", items: ["方程式", "实验", "概念"] },
@@ -97,6 +97,7 @@ const studyMenus = [
 
 const routeMenus = {
   "#english-words": { subject: "英语", category: "单词" },
+  "#english-phrases": { subject: "英语", category: "词组" },
   "#words": { subject: "英语", category: "单词" },
   "#chinese-recite": { subject: "语文", category: "背诵" },
   "#rocket": { tab: "rocket" },
@@ -257,7 +258,7 @@ function initializeDates() {
 }
 
 function renderStudyMenu() {
-  $("subjectMenu").innerHTML = studyMenus.map((group) => `
+  $("subjectMenu").innerHTML = homeMenuGroups().map((group) => `
     <article class="subject-card">
       <h3>${escapeHtml(group.subject)}</h3>
       <div class="subject-actions">
@@ -267,6 +268,24 @@ function renderStudyMenu() {
       </div>
     </article>
   `).join("");
+}
+
+function homeMenuGroups() {
+  if (!state.catalog?.subjects?.length || !state.catalog?.categories?.length) {
+    return studyMenus;
+  }
+  return studyMenus.map((fallback) => {
+    const subject = state.catalog.subjects.find((row) => row.name === fallback.subject);
+    const categoryNames = subject
+      ? state.catalog.categories
+          .filter((row) => String(row.subject_id || "") === String(subject.id))
+          .map((row) => row.name)
+      : [];
+    const extras = fallback.items.filter((name) =>
+      !categoryNames.some((categoryName) => categoryName === name || categoryName.includes(name) || name.includes(categoryName))
+    );
+    return { subject: fallback.subject, items: [...categoryNames, ...extras] };
+  });
 }
 
 function fillSelect(id, rows, labelKey, emptyLabel = "") {
