@@ -59,7 +59,7 @@ window.loadExamPage = async function () {
     examEl("examPapers").innerHTML = `<button type="button" class="exam-paper ${!examState.paperId ? "active" : ""}" data-paper="all"><strong>全部年份</strong><span>跨卷查看</span><small>${visible.length} 张原卷</small></button>` + visible.map((row) => `
       <button type="button" class="exam-paper ${Number(row.id) === examState.paperId ? "active" : ""}" data-paper="${row.id}">
         <strong>${examEscape(row.exam_year)} ${examEscape(row.subject)}</strong>
-        <span>${examEscape(row.title)}</span><small>${row.question_count ? `${row.question_count} 题已标注` : "逐题索引待整理"}</small>
+        <span>${examEscape(row.title)}</span><small>${row.question_count ? `${row.question_count} 题已建索引` : "逐题索引待整理"}</small>
       </button>`).join("");
     examEl("examNewQuestionBtn").disabled = !examState.paperId;
     await loadExamQuestions(request);

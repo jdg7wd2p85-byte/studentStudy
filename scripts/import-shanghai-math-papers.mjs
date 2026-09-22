@@ -40,13 +40,35 @@ async function api(path, options) {
 
 const existing = await api(`/api/exams/papers?childId=${childId}`);
 let added = 0;
+let addedQuestions = 0;
 for (const source of papers) {
-  if (existing.some((paper) => Number(paper.exam_year) === source.year && paper.subject === "数学")) continue;
-  await api("/api/exams/papers", {
-    method: "POST",
-    body: JSON.stringify({ childId, year: source.year, subject: "数学",
-      title: `${source.year}年上海市中考数学真题`, paperUrl: source.paperUrl, note: source.note }),
-  });
-  added++;
+  let paper = existing.find((item) => Number(item.exam_year) === source.year && item.subject === "数学");
+  if (!paper) {
+    const created = await api("/api/exams/papers", {
+      method: "POST",
+      body: JSON.stringify({ childId, year: source.year, subject: "数学",
+        title: `${source.year}年上海市中考数学真题`, paperUrl: source.paperUrl, note: source.note }),
+    });
+    paper = { id: created.id };
+    added++;
+  }
+  const questions = await api(`/api/exams/papers/${paper.id}/questions?childId=${childId}`);
+  const numbers = new Set(questions.map((question) => String(question.question_no)));
+  const pending = [];
+  for (let number = 1; number <= 25; number++) {
+    if (numbers.has(String(number))) continue;
+    pending.push({ number, request: {
+      method: "POST",
+      body: JSON.stringify({ number: String(number),
+        type: number <= 6 ? "选择题" : number <= 18 ? "填空题" : "解答题",
+        learningStage: "UNKNOWN" }),
+    } });
+  }
+  for (let offset = 0; offset < pending.length; offset += 5) {
+    await Promise.all(pending.slice(offset, offset + 5).map(async ({ request }) => {
+      await api(`/api/exams/papers/${paper.id}/questions?childId=${childId}`, request);
+      addedQuestions++;
+    }));
+  }
 }
-console.log(`added=${added} total=${(await api(`/api/exams/papers?childId=${childId}`)).length}`);
+console.log(`addedPapers=${added} addedQuestions=${addedQuestions}`);
