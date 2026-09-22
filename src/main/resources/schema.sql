@@ -153,3 +153,51 @@ CREATE TABLE IF NOT EXISTS schedule_checkins (
   UNIQUE KEY uk_schedule_checkin_day (schedule_item_id, child_id, check_date),
   KEY idx_checkin_child_date (child_id, check_date, status)
 );
+
+CREATE TABLE IF NOT EXISTS exam_papers (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  child_id BIGINT NOT NULL,
+  region VARCHAR(64) NOT NULL DEFAULT '上海',
+  exam_name VARCHAR(64) NOT NULL DEFAULT '中考',
+  exam_year INT NOT NULL,
+  subject VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  paper_url VARCHAR(2048) NULL,
+  answer_url VARCHAR(2048) NULL,
+  note TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_exam_paper (child_id, region, exam_name, exam_year, subject),
+  KEY idx_exam_paper_child_year (child_id, exam_year)
+);
+
+CREATE TABLE IF NOT EXISTS exam_questions (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  paper_id BIGINT NOT NULL,
+  question_no VARCHAR(32) NOT NULL,
+  question_type VARCHAR(64) NULL,
+  question_text TEXT NULL,
+  question_url VARCHAR(2048) NULL,
+  knowledge_points VARCHAR(500) NULL,
+  grade_level VARCHAR(32) NULL,
+  semester VARCHAR(32) NULL,
+  learning_stage VARCHAR(16) NOT NULL DEFAULT 'UNKNOWN',
+  difficulty VARCHAR(16) NULL,
+  note TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_exam_question (paper_id, question_no),
+  KEY idx_exam_question_grade (grade_level, learning_stage)
+);
+
+CREATE TABLE IF NOT EXISTS exam_attempts (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  question_id BIGINT NOT NULL,
+  child_id BIGINT NOT NULL,
+  result VARCHAR(24) NOT NULL,
+  error_reason VARCHAR(64) NULL,
+  note TEXT NULL,
+  attempted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_exam_attempt_question_time (question_id, attempted_at, id),
+  KEY idx_exam_attempt_child_time (child_id, attempted_at)
+);

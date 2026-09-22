@@ -232,7 +232,7 @@ async function loadAll() {
   initializeDates();
   applyUrlState();
   updateTextReaderControls();
-  await Promise.all([loadItems(), loadToday(), loadReport(), loadDailyAnalysis(), loadWeekSchedule()]);
+  await Promise.all([loadItems(), loadToday(), loadReport(), loadDailyAnalysis(), loadWeekSchedule(), window.loadExamPage()]);
   await migrateLocalDreams();
   await loadDreams();
   resetRocket();
@@ -255,6 +255,7 @@ function renderCatalog() {
   renderCategoryFilter();
   syncSubjectWithCategory();
   renderStudyMenu();
+  window.initExamCatalog();
 }
 
 function initializeDates() {
@@ -1495,6 +1496,7 @@ function showTab(tabId) {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("active", b.dataset.tab === tabId));
   document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.id === tabId));
   updateUrlFromState();
+  if (tabId === "exams" && state.catalog) window.loadExamPage();
 }
 
 function activeTabId() {
@@ -1518,6 +1520,7 @@ function updateUrlFromState() {
     if (state.itemPage > 1) params.set("page", String(state.itemPage));
     if (state.itemPageSize !== 50) params.set("pageSize", String(state.itemPageSize));
   }
+  if (tab === "exams") window.addExamRouteParams(params);
   const nextUrl = `${window.location.pathname}?${params.toString()}`;
   if (`${window.location.pathname}${window.location.search}` !== nextUrl) {
     window.history.replaceState(null, "", nextUrl);
@@ -1542,6 +1545,7 @@ function applyUrlState() {
       state.itemPageSize = Math.max(1, Number(params.get("pageSize")) || 50);
       $("itemsPageSizeSelect").value = String(state.itemPageSize);
     }
+    if (tab === "exams") window.restoreExamRoute(params);
     showTab(tab || "home");
   } finally {
     state.restoringUrl = false;

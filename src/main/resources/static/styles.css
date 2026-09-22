@@ -19,6 +19,48 @@
   --soft-mint: #c7efd8;
 }
 
+.exam-heading, .exam-toolbar, .exam-question-head, .exam-actions, .exam-paper-detail > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.exam-heading h2 { margin: 0; font-size: 22px; }
+.exam-filters, .exam-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.exam-filters label, .exam-form label { display: grid; gap: 5px; min-width: 0; font-size: 13px; color: var(--muted); }
+.exam-filters .wide, .exam-form .wide { grid-column: 1 / -1; }
+.exam-filters input, .exam-filters select, .exam-form input, .exam-form select, .exam-form textarea { width: 100%; min-width: 0; }
+.exam-summary { margin: 12px 0; color: var(--brand-dark); line-height: 1.6; }
+.exam-toolbar { justify-content: flex-start; margin: 12px 0; }
+.exam-papers { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; }
+.exam-paper { min-width: 150px; max-width: 220px; display: grid; gap: 3px; text-align: left; white-space: normal; }
+.exam-paper.active { background: var(--brand-weak); border-color: var(--brand); }
+.exam-paper span, .exam-paper small { color: var(--muted); font-size: 12px; }
+.exam-paper-detail { padding: 10px 0 14px; border-bottom: 1px solid var(--line); }
+.exam-paper-detail > div { justify-content: flex-start; margin-top: 8px; }
+.exam-paper-detail a, .exam-question a { color: var(--brand-dark); }
+.exam-question { padding: 14px 0; border-bottom: 1px solid var(--line); }
+.exam-question-head { align-items: baseline; }
+.exam-question-head span, .exam-question small { color: var(--muted); font-size: 12px; }
+.exam-question p { margin: 7px 0; color: var(--text); }
+.exam-question-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; }
+.exam-question small { display: block; margin-top: 8px; }
+.exam-actions { justify-content: flex-start; margin-top: 10px; }
+.exam-modal-panel { max-height: 88vh; overflow-y: auto; }
+.exam-attempt-history > div { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.exam-attempt-history p { white-space: pre-wrap; }
+@media (max-width: 560px) {
+  .exam-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .exam-form { grid-template-columns: 1fr; }
+  .exam-form .wide { grid-column: auto; }
+}
+
 * { box-sizing: border-box; }
 body {
   margin: 0;

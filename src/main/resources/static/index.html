@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>七年级学习岛</title>
-  <link rel="stylesheet" href="/styles.css?v=20260902-5">
+  <link rel="stylesheet" href="/styles.css?v=20260922-1">
 </head>
 <body>
 <header class="app-header">
@@ -33,6 +33,7 @@
     <button data-tab="reader">朗读</button>
     <button data-tab="items">列表</button>
     <button data-tab="paper">出题</button>
+    <button data-tab="exams">中考真题</button>
     <button data-tab="report">报告</button>
     <button data-tab="analysis">每日分析</button>
     <button data-tab="schedule">课程表</button>
@@ -158,6 +159,26 @@ apple 苹果"></div>
       </div>
     </div>
     <div id="itemsList" class="list"></div>
+  </section>
+
+  <section id="exams" class="panel">
+    <div class="exam-heading">
+      <h2>历年中考真题</h2>
+      <button id="examCopyLinkBtn" type="button">复制当前链接</button>
+    </div>
+    <div class="exam-filters">
+      <label>孩子<select id="examChild"></select></label>
+      <label>年份<select id="examYear"><option value="">全部年份</option></select></label>
+      <label>科目<select id="examSubject"><option value="">全部科目</option></select></label>
+      <label>年级<select id="examGrade"><option value="">全部年级</option><option value="七年级">七年级</option><option value="八年级">八年级</option><option value="九年级">九年级</option><option value="跨年级">跨年级</option></select></label>
+      <label>进度<select id="examStage"><option value="">全部进度</option><option value="LEARNED">已学</option><option value="LEARNING">正在学</option><option value="UNLEARNED">未学</option><option value="UNKNOWN">待标注</option></select></label>
+      <label>结果<select id="examResult"><option value="">全部结果</option><option value="UNATTEMPTED">未做过</option><option value="CORRECT">独立做对</option><option value="HINTED">提示后会</option><option value="WRONG">不会</option><option value="CARELESS">粗心</option></select></label>
+      <label class="wide">知识点或题号<input id="examKeyword" placeholder="例如 因式分解"></label>
+    </div>
+    <div id="examSummary" class="exam-summary"></div>
+    <div class="exam-toolbar"><button id="examNewPaperBtn" type="button" class="primary">添加原卷</button><button id="examNewQuestionBtn" type="button">添加题目</button></div>
+    <div id="examPapers" class="exam-papers"></div>
+    <div id="examQuestions" class="exam-questions"></div>
   </section>
 
   <section id="paper" class="panel">
@@ -321,6 +342,54 @@ apple 苹果"></div>
   </div>
 </div>
 
-<script src="/app.js?v=20260903-4"></script>
+<div id="examPaperModal" class="modal hidden">
+  <div class="modal-panel exam-modal-panel">
+    <div class="modal-head"><h3 id="examPaperModalTitle">添加原卷</h3><button id="examPaperCloseBtn" type="button" class="icon-btn">关闭</button></div>
+    <div class="exam-form">
+      <label>年份<input id="examPaperYear" type="number" min="2000" max="2100"></label>
+      <label>科目<select id="examPaperSubject"></select></label>
+      <label class="wide">标题<input id="examPaperTitle" placeholder="例如 2025 上海中考数学原卷"></label>
+      <label class="wide">原卷链接<input id="examPaperUrl" type="url" placeholder="https://..."></label>
+      <label class="wide">答案链接<input id="examAnswerUrl" type="url" placeholder="https://..."></label>
+      <label class="wide">备注<textarea id="examPaperNote" rows="2"></textarea></label>
+    </div>
+    <div class="actions"><button id="examPaperDeleteBtn" type="button" class="danger">删除原卷</button><button id="examPaperSaveBtn" type="button" class="primary">保存原卷</button></div>
+  </div>
+</div>
+
+<div id="examQuestionModal" class="modal hidden">
+  <div class="modal-panel exam-modal-panel">
+    <div class="modal-head"><h3 id="examQuestionModalTitle">添加题目</h3><button id="examQuestionCloseBtn" type="button" class="icon-btn">关闭</button></div>
+    <div class="exam-form">
+      <label>题号<input id="examQuestionNumber" placeholder="例如 1 或 25(2)"></label>
+      <label>题型<input id="examQuestionType" placeholder="选择 / 填空 / 解答"></label>
+      <label class="wide">题目内容（可选）<textarea id="examQuestionText" rows="4"></textarea></label>
+      <label class="wide">原题链接<input id="examQuestionUrl" type="url" placeholder="https://..."></label>
+      <label class="wide">知识点<input id="examQuestionKnowledge" placeholder="多个知识点用逗号分隔"></label>
+      <label>对应年级<select id="examQuestionGrade"><option value="">待标注</option><option>七年级</option><option>八年级</option><option>九年级</option><option>跨年级</option></select></label>
+      <label>学期<input id="examQuestionSemester" placeholder="例如 七上"></label>
+      <label>学习进度<select id="examQuestionStage"><option value="UNKNOWN">待标注</option><option value="LEARNED">已学</option><option value="LEARNING">正在学</option><option value="UNLEARNED">未学</option></select></label>
+      <label>难度<select id="examQuestionDifficulty"><option value="">未标注</option><option>基础</option><option>中等</option><option>综合</option></select></label>
+      <label class="wide">备注<textarea id="examQuestionNote" rows="2"></textarea></label>
+    </div>
+    <div class="actions"><button id="examQuestionDeleteBtn" type="button" class="danger">删除题目</button><button id="examQuestionSaveBtn" type="button" class="primary">保存题目</button></div>
+  </div>
+</div>
+
+<div id="examAttemptModal" class="modal hidden">
+  <div class="modal-panel exam-modal-panel">
+    <div class="modal-head"><h3 id="examAttemptModalTitle">作答记录</h3><button id="examAttemptCloseBtn" type="button" class="icon-btn">关闭</button></div>
+    <div class="exam-form">
+      <label>本次结果<select id="examAttemptResult"><option value="CORRECT">独立做对</option><option value="HINTED">提示后会</option><option value="WRONG">不会</option><option value="CARELESS">粗心</option></select></label>
+      <label>错误原因<select id="examAttemptReason"><option value="">未标注</option><option>知识点不熟</option><option>思路没想到</option><option>计算错误</option><option>审题错误</option><option>概念混淆</option><option>其他</option></select></label>
+      <label class="wide">备注<textarea id="examAttemptNote" rows="2"></textarea></label>
+    </div>
+    <div class="actions"><button id="examAttemptSaveBtn" type="button" class="primary">保存本次作答</button></div>
+    <div id="examAttemptHistory" class="exam-attempt-history"></div>
+  </div>
+</div>
+
+<script src="/exam.js?v=20260922-1"></script>
+<script src="/app.js?v=20260922-1"></script>
 </body>
 </html>
