@@ -27,6 +27,13 @@
   gap: 8px;
 }
 .exam-heading h2 { margin: 0; font-size: 22px; }
+.exam-resources { margin-top: 14px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.exam-resources summary { cursor: pointer; color: var(--brand-dark); font-weight: 700; }
+.exam-resources nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.exam-resources a { display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); color: var(--brand-dark); text-decoration: none; }
+.exam-resources a:hover, .exam-resources a:focus-visible { border-color: var(--brand); text-decoration: underline; }
+.exam-resources small, .exam-resources p { color: var(--muted); font-size: 12px; }
+.exam-resources p { margin: 9px 0 0; }
 .exam-filters, .exam-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
