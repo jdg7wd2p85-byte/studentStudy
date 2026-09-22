@@ -59,7 +59,7 @@ window.loadExamPage = async function () {
     examEl("examPapers").innerHTML = `<button type="button" class="exam-paper ${!examState.paperId ? "active" : ""}" data-paper="all"><strong>全部年份</strong><span>跨卷查看</span><small>${visible.length} 张原卷</small></button>` + visible.map((row) => `
       <button type="button" class="exam-paper ${Number(row.id) === examState.paperId ? "active" : ""}" data-paper="${row.id}">
         <strong>${examEscape(row.exam_year)} ${examEscape(row.subject)}</strong>
-        <span>${examEscape(row.title)}</span><small>${row.question_count} 题</small>
+        <span>${examEscape(row.title)}</span><small>${row.question_count ? `${row.question_count} 题已标注` : "逐题索引待整理"}</small>
       </button>`).join("");
     examEl("examNewQuestionBtn").disabled = !examState.paperId;
     await loadExamQuestions(request);
@@ -99,7 +99,7 @@ async function loadExamQuestions(request = examState.request) {
         ${row.question_url ? safeLink(row.question_url, "打开原题") : ""}
         <small>作答 ${row.attempt_count} 次${row.latest_attempted_at ? ` · 最近 ${examEscape(String(row.latest_attempted_at).replace("T", " ").slice(0, 16))}` : ""}</small>
         <div class="exam-actions"><button type="button" data-attempt="${row.id}">记录作答 / 历史</button><button type="button" data-edit-question="${row.id}">编辑标注</button></div>
-      </article>`).join("") : `<p class="empty-note">当前筛选没有题目</p>`}`;
+      </article>`).join("") : `<p class="empty-note">${paper && !Number(paper.question_count) ? "原卷链接已收录，逐题索引待整理；可点击“打开原卷”查看题面。" : "当前筛选没有题目"}</p>`}`;
   } catch (error) { examNotify(error); }
 }
 
